@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simuladores de Motores de Voo</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500..800&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light dark;
+  --bg:#e9edf0; --panel:#f8fafb; --panel-2:#edf1f3; --line:#c5cfd5; --text:#141b20; --muted:#4a5963;
+  --in:#1b74d1; --comp:#a86a00; --pow:#d4381a; --exh:#587068;
+  --metal:#cdd5da; --metal-2:#9aa6ae; --block:#7d8a93; --hollow:#e3e8eb; --outline:#26313a; --spark:#f2b200;
+  --btn-bg:#141b20; --btn-fg:#f4f7f8;
+  --f-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --f-body:'Atkinson Hyperlegible','Segoe UI',system-ui,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1317; --panel:#151c22; --panel-2:#1b242b; --line:#2b3841; --text:#e8eef1; --muted:#9aa9b3;
+    --in:#5db0ff; --comp:#ffb42e; --pow:#ff6a47; --exh:#9db4ad;
+    --metal:#aeb9c1; --metal-2:#78858e; --block:#38444c; --hollow:#0a0f12; --outline:#8d9ba5; --spark:#ffd23f;
+    --btn-bg:#e8eef1; --btn-fg:#0e1317;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1317; --panel:#151c22; --panel-2:#1b242b; --line:#2b3841; --text:#e8eef1; --muted:#9aa9b3;
+  --in:#5db0ff; --comp:#ffb42e; --pow:#ff6a47; --exh:#9db4ad;
+  --metal:#aeb9c1; --metal-2:#78858e; --block:#38444c; --hollow:#0a0f12; --outline:#8d9ba5; --spark:#ffd23f;
+  --btn-bg:#e8eef1; --btn-fg:#0e1317;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:400 16px/1.55 var(--f-body)}
+h1,h2,h3{font-family:var(--f-display);line-height:1.15;margin:0}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--in);outline-offset:2px;border-radius:6px}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
+header.top{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;padding:6px 0 14px}
+header.top h1{font-size:clamp(24px,4vw,34px);font-weight:700;letter-spacing:-.01em}
+header.top p{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.theme{flex:none;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:7px 14px;cursor:pointer;font-weight:700;font-size:14px}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:6px;overflow-x:auto;padding:8px 0 10px;margin-bottom:12px;border-bottom:1px solid var(--line);scrollbar-width:thin}
+nav.tabs button{flex:none;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:9px 16px;cursor:pointer;font-weight:700;font-size:15px;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{background:var(--btn-bg);color:var(--btn-fg);border-color:var(--btn-bg)}
+.tabpanel[hidden]{display:none}
+.stage{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.stage{grid-template-columns:minmax(0,1fr)}}
+.viewport{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px;margin:0 0 12px;overflow:hidden}
+.viewport canvas{display:block;width:100%}
+.viewport svg{display:block;width:100%;height:auto;touch-action:none}
+.viewport figcaption{font:700 14px var(--f-body);color:var(--muted);padding:6px 8px 0}
+.graphwrap{margin-top:6px;border-top:1px solid var(--line);padding-top:6px}
+.graphwrap p{margin:0 0 2px 6px;font-size:13px;color:var(--muted);font-weight:700}
+.controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-bottom:10px}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:700;font-size:15px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--btn-bg);color:var(--btn-fg);border-color:var(--btn-bg);min-width:112px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.field,.check{display:flex;align-items:center;gap:8px;font-size:15px}
+.field output{min-width:3.4em;font-variant-numeric:tabular-nums;font-weight:700}
+.check{cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--text)}
+input[type=range]{accent-color:var(--text);min-width:140px}
+.scrub{display:flex;align-items:center;gap:10px;font-size:15px;margin-bottom:6px}
+.scrub input{flex:1}
+.scrub output{min-width:12.5em;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chip{--c:var(--muted);border:1px solid var(--line);border-top:5px solid var(--c);background:var(--panel);border-radius:10px;padding:7px 12px 8px;cursor:pointer;font-weight:700;font-size:15px;text-align:left}
+.chip[aria-current="true"]{background:color-mix(in srgb,var(--c) 16%,var(--panel));border-color:var(--c)}
+.chip-n{display:inline-block;min-width:1.2em;color:var(--c);font-family:var(--f-display)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+.card h2{font-size:clamp(21px,2.6vw,26px);display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.card .dot{width:14px;height:14px;border-radius:50%;flex:none}
+.card .simple{font-size:18px;margin:0 0 12px;font-weight:700}
+.card dl{margin:0;display:grid;gap:2px}
+.card dt{font-weight:700;color:var(--muted);font-size:14px;margin-top:8px}
+.card dd{margin:0;max-width:62ch}
+.tags{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:14px 0 0;padding:0}
+.tag{--c:var(--muted);border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:14px;display:flex;gap:6px}
+.tag b{font-weight:700}
+.tag[data-on="true"]{border-color:var(--c);background:color-mix(in srgb,var(--c) 16%,var(--panel))}
+.note{border-left:5px solid var(--exh);background:var(--panel);border-radius:0 12px 12px 0;padding:12px 16px;margin-bottom:12px}
+.note b{font-family:var(--f-display)}
+.note p{margin:4px 0 0}
+details.parts{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 16px}
+details.parts summary{cursor:pointer;font-weight:700}
+details.parts ol{margin:10px 0 2px;padding-left:1.4em;display:grid;gap:6px}
+details.parts li::marker{font-weight:700}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+.seg label{position:relative;padding:8px 14px;cursor:pointer;font-weight:700;font-size:15px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--btn-bg);color:var(--btn-fg)}
+.seg label:has(input:focus-visible){outline:3px solid var(--in);outline-offset:-3px}
+.steps{margin:6px 0 0;padding-left:1.3em;display:grid;gap:8px}
+.c-in{color:var(--in);font-weight:700}.c-comp{color:var(--comp);font-weight:700}.c-pow{color:var(--pow);font-weight:700}
+.total{font:700 clamp(30px,5vw,44px)/1.1 var(--f-display);margin:12px 0 2px;font-variant-numeric:tabular-nums}
+.quiz{display:grid;gap:10px}
+.quiz .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.quiz input[type=text]{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:9px 12px;width:9.5em;font-size:17px;font-variant-numeric:tabular-nums}
+.fb{min-height:1.5em;font-weight:700}
+.fb.ok{color:var(--in)}.fb.no{color:var(--pow)}
+.tips{margin:0;padding-left:1.2em;display:grid;gap:6px}
+.tablewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+table.cmp{border-collapse:collapse;width:100%;min-width:760px;font-size:15px}
+table.cmp th,table.cmp td{padding:12px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+table.cmp thead th{font-family:var(--f-display);font-size:18px;border-bottom:3px solid var(--text)}
+table.cmp tbody th{font-weight:700;color:var(--muted);width:17%}
+table.cmp tr:last-child th,table.cmp tr:last-child td{border-bottom:0}
+.intro{max-width:70ch;color:var(--muted);margin:0 0 14px}
+@media (max-width:520px){.scrub{flex-wrap:wrap}.scrub output{text-align:left;min-width:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div>
+    <h1>Simuladores de Motores de Voo</h1>
+    <p>Animações para perceber como funcionam os motores, o carburador, o perfil alar e o tubo de pitot, e treino de leitura do paquímetro e do micrómetro.</p>
+  </div>
+  <button class="theme" id="themeBtn" type="button">Tema claro/escuro</button>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Simuladores">
+  <button role="tab" type="button" data-tab="m4" aria-selected="true">4 tempos</button>
+  <button role="tab" type="button" data-tab="m2" aria-selected="false">2 tempos</button>
+  <button role="tab" type="button" data-tab="wk" aria-selected="false">Wankel</button>
+  <button role="tab" type="button" data-tab="carb" aria-selected="false">Carburador</button>
+  <button role="tab" type="button" data-tab="aero" aria-selected="false">Perfil alar</button>
+  <button role="tab" type="button" data-tab="pitot" aria-selected="false">Pitot e estática</button>
+  <button role="tab" type="button" data-tab="paq" aria-selected="false">Paquímetro</button>
+  <button role="tab" type="button" data-tab="mic" aria-selected="false">Micrómetro</button>
+  <button role="tab" type="button" data-tab="cmp" aria-selected="false">Comparar motores</button>
+</nav>
+
+<section class="tabpanel" id="tab-m4" role="tabpanel"></section>
+<section class="tabpanel" id="tab-m2" role="tabpanel" hidden></section>
+<section class="tabpanel" id="tab-wk" role="tabpanel" hidden></section>
+
+
+<section class="tabpanel" id="tab-carb" role="tabpanel" hidden>
+  <div class="stage">
+    <div>
+      <div class="viewport"><canvas id="cb-cv" role="img" aria-label="Corte de um carburador"></canvas></div>
+      <div class="controls">
+        <label class="field">Manete (borboleta) <input id="cb-thr" type="range" min="0" max="100" step="1" value="70"><output id="cb-thr-o"></output></label>
+        <label class="field">Mistura <input id="cb-mix" type="range" min="0" max="100" step="1" value="55"><output id="cb-mix-o"></output></label>
+      </div>
+      <div class="controls">
+        <button class="btn primary" id="cb-play" type="button">Pausa</button>
+        <label class="check"><input id="cb-ice" type="checkbox"> Ar húmido (risco de gelo)</label>
+        <label class="check"><input id="cb-heat" type="checkbox"> Aquecimento do carburador</label>
+        <label class="check"><input id="cb-nums" type="checkbox" checked> Números das peças</label>
+      </div>
+    </div>
+    <div>
+      <article class="card" id="cb-card" aria-live="polite"></article>
+      <ul class="tags" id="cb-tags" style="margin:0 0 12px"></ul>
+      <aside class="note"><b>Na aviação</b><p>Muitos motores de aviões ligeiros usam carburador. O gelo no carburador pode formar-se mesmo com temperatura exterior positiva, e por isso o aquecimento do carburador faz parte dos procedimentos. Os motores com injeção não têm este problema.</p></aside>
+      <details class="parts"><summary>Peças (os números estão na animação)</summary><ol>
+        <li><b>Filtro de ar</b>: limpa o ar antes de entrar.</li>
+        <li><b>Venturi (garganta)</b>: o estrangulamento onde o ar acelera e a pressão desce.</li>
+        <li><b>Bico e jacto principal</b>: a pressão baixa aspira a gasolina e pulveriza-a no ar.</li>
+        <li><b>Cuba (câmara do flutuador)</b>: reservatório de gasolina com nível constante.</li>
+        <li><b>Flutuador e válvula de agulha</b>: se o nível desce, o flutuador desce e abre a entrada; se sobe, fecha-a.</li>
+        <li><b>Borboleta</b>: controla quanto ar passa, ou seja, a potência. É ligada à manete.</li>
+        <li><b>Agulha da mistura</b>: controla quanta gasolina passa pelo jacto. É ligada ao comando da mistura.</li>
+        <li><b>Gelo</b>: forma-se na garganta e na borboleta quando há ar húmido.</li>
+      </ol></details>
+    </div>
+  </div>
+</section>
+
+<section class="tabpanel" id="tab-aero" role="tabpanel" hidden>
+  <div class="stage">
+    <div>
+      <div class="viewport"><canvas id="aero-cv" role="img" aria-label="Escoamento de ar à volta de um perfil alar"></canvas>
+        <div class="graphwrap"><p>Cl (coeficiente de sustentação) em função do ângulo de ataque</p><canvas id="aero-gr" role="img" aria-label="Gráfico do coeficiente de sustentação"></canvas></div></div>
+      <div class="controls">
+        <label class="field">Ângulo de ataque <input id="aero-aoa" type="range" min="-5" max="22" step="0.5" value="5"><output id="aero-aoa-o"></output></label>
+        <label class="field">Velocidade <input id="aero-v" type="range" min="40" max="160" step="1" value="90"><output id="aero-v-o"></output></label>
+      </div>
+      <div class="controls">
+        <button class="btn primary" id="aero-play" type="button">Pausa</button>
+        <label class="check"><input id="aero-camber" type="checkbox" checked> Perfil curvo (assimétrico)</label>
+        <label class="check"><input id="aero-forces" type="checkbox" checked> Mostrar forças</label>
+      </div>
+    </div>
+    <div>
+      <article class="card" id="aero-card" aria-live="polite"></article>
+      <ul class="tags" id="aero-tags" style="margin:0 0 12px"></ul>
+      <aside class="note"><b>Desafio</b><p>O peso do avião de exemplo é 11 kN. Reduz a velocidade e vê o que acontece ao «Cl necessário» no gráfico. Chega a um ponto em que nem o ângulo crítico chega: essa é a velocidade de perda.</p></aside>
+      <aside class="note" style="border-left-color:var(--in)"><b>Cores</b><p>Azul: ar rápido, pressão baixa. Laranja: ar lento, pressão alta. Cinzento: ar turbulento. O modelo é simplificado, com uma asa de 16 m² ao nível do mar.</p></aside>
+      <details class="parts"><summary>Termos</summary><ul class="tips" style="margin-top:8px">
+        <li><b>Corda</b>: linha reta do bordo de ataque ao bordo de fuga.</li>
+        <li><b>Vento relativo</b>: o ar visto pelo avião; vem sempre de frente, na direção do movimento.</li>
+        <li><b>Ângulo de ataque</b>: ângulo entre a corda e o vento relativo. Não é o mesmo que a atitude do avião.</li>
+        <li><b>Sustentação</b>: força perpendicular ao vento relativo. <b>Resistência</b>: força na direção do vento.</li>
+        <li><b>Nota</b>: não é verdade que o ar de cima e o de baixo «tenham de chegar ao mesmo tempo» ao bordo de fuga.</li>
+      </ul></details>
+    </div>
+  </div>
+</section>
+
+<section class="tabpanel" id="tab-pitot" role="tabpanel" hidden>
+  <div class="stage">
+    <div>
+      <div class="viewport"><canvas id="pt-cv" role="img" aria-label="Tubo de pitot, linhas de pressão e instrumentos"></canvas></div>
+      <div class="controls">
+        <label class="field">Velocidade <input id="pt-ias" type="range" min="0" max="180" step="1" value="90"><output id="pt-ias-o"></output></label>
+        <label class="field">Altitude <input id="pt-alt" type="range" min="0" max="12000" step="100" value="3000"><output id="pt-alt-o"></output></label>
+      </div>
+      <div class="controls">
+        <button class="btn" type="button" data-climb="1" aria-pressed="false">Subir</button>
+        <button class="btn" type="button" data-climb="0" aria-pressed="true">Nivelar</button>
+        <button class="btn" type="button" data-climb="-1" aria-pressed="false">Descer</button>
+      </div>
+      <div class="controls">
+        <span class="seg" role="radiogroup" aria-label="Estado do pitot">
+          <label><input type="radio" name="pt-mode" value="0" checked>Pitot normal</label>
+          <label><input type="radio" name="pt-mode" value="1">Entrada bloqueada</label>
+          <label><input type="radio" name="pt-mode" value="2">Entrada e dreno bloqueados</label>
+        </span>
+      </div>
+      <div class="controls">
+        <label class="check"><input id="pt-static" type="checkbox"> Tomadas estáticas bloqueadas</label>
+        <label class="check"><input id="pt-heat" type="checkbox"> Aquecimento do pitot (derrete gelo)</label>
+      </div>
+    </div>
+    <div>
+      <article class="card" id="pt-card" aria-live="polite"></article>
+      <ul class="tags" id="pt-tags" style="margin:0 0 12px"></ul>
+      <aside class="note"><b>Como pensar</b>
+        <ul class="tips">
+          <li>O pitot só sente a pressão do ar que «bate» de frente (pressão total). As tomadas laterais sentem só a pressão do ar parado à volta (pressão estática).</li>
+          <li>Quanto mais depressa o avião voa, maior é a diferença entre as duas, e o velocímetro mede essa diferença.</li>
+          <li>Quanto mais alto, menor a pressão estática, e o altímetro mede só essa pressão.</li>
+          <li>O tempo nos botões Subir/Descer corre mais depressa do que na realidade.</li>
+        </ul></aside>
+      <aside class="note" style="border-left-color:var(--in)"><b>Na pré-voo</b><p>Tira a capa do pitot, verifica que a entrada e as tomadas estáticas estão livres, e confirma que o aquecimento do pitot funciona. Um pitot tapado já esteve na origem de acidentes graves.</p></aside>
+    </div>
+  </div>
+</section>
+
+<section class="tabpanel" id="tab-paq" role="tabpanel" hidden>
+  <div class="stage">
+    <div>
+      <figure class="viewport"><svg id="cal-svg" viewBox="0 0 900 330" role="img" aria-label="Paquímetro com uma peça entre as garras. Arrasta a parte deslizante."></svg></figure>
+      <figure class="viewport"><figcaption>Lupa do nónio: repara no traço que coincide</figcaption><svg id="cal-zoom" viewBox="0 40 900 190" role="img" aria-label="Ampliação do nónio"></svg></figure>
+      <div class="controls">
+        <label class="field">Abertura <input id="cal-slider" type="range" min="0" max="900" step="1" value="0"><output id="cal-val"></output></label>
+      </div>
+      <div class="controls">
+        <button class="btn" type="button" data-cs="-20">−1 mm</button>
+        <button class="btn" type="button" data-cs="-1">− 1 passo</button>
+        <button class="btn" type="button" data-cs="1">+ 1 passo</button>
+        <button class="btn" type="button" data-cs="20">+1 mm</button>
+      </div>
+      <div class="controls">
+        <span class="seg" role="radiogroup" aria-label="Resolução do nónio">
+          <label><input type="radio" name="cal-res" value="20" checked>Nónio 0,05 mm</label>
+          <label><input type="radio" name="cal-res" value="50">Nónio 0,02 mm</label>
+        </span>
+        <span class="seg" role="radiogroup" aria-label="Modo">
+          <label><input type="radio" name="cal-mode" value="free" checked>Explorar</label>
+          <label><input type="radio" name="cal-mode" value="quiz">Exercício</label>
+        </span>
+      </div>
+    </div>
+    <div>
+      <article class="card" id="cal-read"></article>
+      <article class="card quiz" id="cal-quiz" hidden></article>
+      <aside class="note"><b>Como pensar</b>
+        <ul class="tips">
+          <li>A <b>resolução</b> é 1 mm a dividir pelo número de traços do nónio: 1 ÷ 20 = 0,05 mm; 1 ÷ 50 = 0,02 mm.</li>
+          <li>O nónio é 1 traço mais curto do que a escala: cada traço avança 0,05 mm (ou 0,02 mm) em relação ao traço de cima. O traço que fica alinhado diz-te quantos avanços há.</li>
+          <li>Antes de medir, fecha as garras: o zero do nónio tem de coincidir com o zero da escala. Lê de frente, para não errar por paralaxe.</li>
+        </ul>
+      </aside>
+      <aside class="note" style="border-left-color:var(--in)"><b>Na manutenção de aeronaves</b>
+        <p>Mede-se o diâmetro de êmbolos, cambotas e hastes de válvulas e compara-se com os limites do manual do fabricante (tolerâncias e limites de serviço). Uma peça fora do limite é rejeitada.</p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="tabpanel" id="tab-mic" role="tabpanel" hidden>
+  <div class="stage">
+    <div>
+      <figure class="viewport"><figcaption>Lupa da manga e do tambor (arrasta o tambor para cima/baixo, ou usa a roda do rato)</figcaption><svg id="mic-read" viewBox="0 0 900 300" role="img" aria-label="Manga e tambor do micrómetro"></svg></figure>
+      <figure class="viewport"><svg id="mic-gap" viewBox="0 0 900 215" role="img" aria-label="Micrómetro a medir uma peça"></svg></figure>
+      <div class="controls">
+        <label class="field">Abertura <input id="mic-slider" type="range" min="0" max="2500" step="1" value="0"><output id="mic-val"></output></label>
+      </div>
+      <div class="controls">
+        <button class="btn" type="button" data-ms="-50">− meia volta (0,5)</button>
+        <button class="btn" type="button" data-ms="-1">− 0,01</button>
+        <button class="btn" type="button" data-ms="1">+ 0,01</button>
+        <button class="btn" type="button" data-ms="50">+ meia volta (0,5)</button>
+      </div>
+      <div class="controls">
+        <span class="seg" role="radiogroup" aria-label="Modo">
+          <label><input type="radio" name="mic-mode" value="free" checked>Explorar</label>
+          <label><input type="radio" name="mic-mode" value="quiz">Exercício</label>
+        </span>
+      </div>
+    </div>
+    <div>
+      <article class="card" id="mic-readcard"></article>
+      <article class="card quiz" id="mic-quiz" hidden></article>
+      <aside class="note"><b>Como pensar</b>
+        <ul class="tips">
+          <li>O parafuso do micrómetro tem passo de <b>0,5 mm</b>: uma volta completa do tambor avança 0,5 mm.</li>
+          <li>O tambor tem <b>50 divisões</b>, por isso cada divisão vale 0,5 ÷ 50 = <b>0,01 mm</b>.</li>
+          <li>Lê em três passos: mm inteiros (traços de cima) + 0,5 mm se o traço de baixo estiver visível + divisões do tambor na linha central.</li>
+          <li>Aperta sempre pela roquete (a «carraca»): assim a força é sempre a mesma e não deformas a peça.</li>
+        </ul>
+      </aside>
+      <aside class="note" style="border-left-color:var(--in)"><b>Na manutenção de aeronaves</b>
+        <p>O micrómetro mede com 0,01 mm. É a ferramenta para diâmetros de cambota, de cilindro e de êmbolo, onde um desgaste de centésimos de milímetro já importa.</p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="tabpanel" id="tab-cmp" role="tabpanel" hidden>
+  <p class="intro">Os três motores fazem o mesmo trabalho: transformar a energia do combustível em rotação. O que muda é como controlam a entrada e a saída dos gases.</p>
+  <div class="tablewrap">
+  <table class="cmp">
+    <thead><tr><th></th><th>4 tempos</th><th>2 tempos</th><th>Wankel</th></tr></thead>
+    <tbody>
+      <tr><th>Ciclo completo</th><td>4 cursos do pistão = 2 voltas da cambota</td><td>2 cursos do pistão = 1 volta da cambota</td><td>4 tempos em cada face do rotor; o rotor dá 1 volta enquanto o veio dá 3</td></tr>
+      <tr><th>Combustões</th><td>1 por cilindro em cada 2 voltas</td><td>1 por cilindro em cada volta</td><td>1 por rotor em cada volta do veio</td></tr>
+      <tr><th>Entrada e saída dos gases</th><td>Válvulas abertas pela árvore de cames</td><td>Luminas na parede do cilindro, abertas e tapadas pelo pistão; cárter como bomba</td><td>Janelas na carcaça, abertas e tapadas pelo rotor</td></tr>
+      <tr><th>Vantagens</th><td>Eficiente e fiável; é o padrão na aviação certificada</td><td>Leve e simples; muita potência para o peso</td><td>Compacto, suave e com poucas peças móveis</td></tr>
+      <tr><th>Desvantagens</th><td>Mais peças (válvulas, cames) e mais peso</td><td>Gasta mais combustível e parte da mistura nova escapa</td><td>Vedantes dos vértices difíceis; consumo mais alto</td></tr>
+      <tr><th>Na aviação</th><td>Lycoming, Continental, Rotax 912</td><td>Ultraleves e drones pequenos (por exemplo a família Rotax 5xx)</td><td>Drones e aeronaves experimentais</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+</div>
+
+<template id="tpl-engine">
+  <div class="stage">
+    <div>
+      <div class="viewport">
+        <canvas class="main" role="img" aria-label="Animação do motor"></canvas>
+        <div class="graphwrap"><p>Pressão no cilindro ao longo do ciclo</p><canvas class="graph" role="img" aria-label="Gráfico de pressão"></canvas></div>
+      </div>
+      <div class="controls">
+        <button class="btn primary js-play" type="button">Pausa</button>
+        <button class="btn js-prev" type="button">‹ Fase anterior</button>
+        <button class="btn js-next" type="button">Fase seguinte ›</button>
+        <label class="field">Velocidade <input class="js-speed" type="range" min="0.1" max="2" step="0.1" value="1"><output class="js-speed-out">1×</output></label>
+      </div>
+      <div class="controls">
+        <label class="check"><input class="js-step" type="checkbox"> Parar no fim de cada fase</label>
+        <label class="check"><input class="js-nums" type="checkbox" checked> Números das peças</label>
+      </div>
+      <label class="scrub">Posição <input class="js-scrub" type="range" min="0" max="719" step="1" value="0"><output class="js-angle"></output></label>
+    </div>
+    <div>
+      <div class="chips js-chips" role="group" aria-label="Fases"></div>
+      <article class="card js-card" aria-live="polite"></article>
+      <aside class="note js-note"></aside>
+      <details class="parts"><summary>Peças (os números estão na animação)</summary><ol class="js-parts"></ol></details>
+    </div>
+  </div>
+</template>
+
+<script>
+(()=>{
+'use strict';
+const TAU=Math.PI*2, DEG=Math.PI/180;
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const mod=(a,n)=>((a%n)+n)%n;
+const fmt=(v,d=2)=>v.toFixed(d).replace('.',',');
+const FONT="'Atkinson Hyperlegible','Segoe UI',system-ui,sans-serif";
+let reduce=false; try{reduce=matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){}
+
+/* ---------- cores ---------- */
+const C={};
+const CV={bg:'--bg',panel:'--panel',line:'--line',text:'--text',muted:'--muted',in:'--in',comp:'--comp',pow:'--pow',exh:'--exh',metal:'--metal',metal2:'--metal-2',block:'--block',hollow:'--hollow',outline:'--outline',spark:'--spark'};
+function loadColors(){const cs=getComputedStyle(document.documentElement);for(const k in CV){C[k]=((cs.getPropertyValue(CV[k])||'').trim())||'#888888';}}
+const hex2rgb=h=>{h=String(h).trim().replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255];};
+const toHex=v=>Math.round(clamp(v,0,255)).toString(16).padStart(2,'0');
+const mixHex=(a,b,t)=>{t=clamp(t,0,1);const A=hex2rgb(a),B=hex2rgb(b);return '#'+toHex(A[0]+(B[0]-A[0])*t)+toHex(A[1]+(B[1]-A[1])*t)+toHex(A[2]+(B[2]-A[2])*t);};
+const rgba=(h,a)=>{const c=hex2rgb(h);return `rgba(${c[0]},${c[1]},${c[2]},${a})`;};
+
+/* ---------- desenho ---------- */
+function box(ctx,x,y,w,h,r,fill=true,stroke=true){
+  ctx.beginPath();
+  if(r){const q=Math.min(r,w/2,h/2);ctx.moveTo(x+q,y);ctx.arcTo(x+w,y,x+w,y+h,q);ctx.arcTo(x+w,y+h,x,y+h,q);ctx.arcTo(x,y+h,x,y,q);ctx.arcTo(x,y,x+w,y,q);ctx.closePath();}
+  else ctx.rect(x,y,w,h);
+  if(fill)ctx.fill(); if(stroke)ctx.stroke();
+}
+function halo(ctx,txt,x,y,size,align,fill){
+  ctx.font=`700 ${size||12}px ${FONT}`;ctx.textAlign=align||'left';ctx.textBaseline='middle';
+  ctx.lineWidth=4;ctx.strokeStyle=C.panel;ctx.lineJoin='round';ctx.strokeText(txt,x,y);
+  ctx.fillStyle=fill||C.text;ctx.fillText(txt,x,y);
+}
+function marker(ctx,n,x,y){
+  ctx.beginPath();ctx.arc(x,y,10,0,TAU);ctx.fillStyle=C.text;ctx.fill();
+  ctx.lineWidth=2;ctx.strokeStyle=C.panel;ctx.stroke();
+  ctx.fillStyle=C.panel;ctx.font=`700 12px ${FONT}`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(n),x,y+0.5);
+}
+function chevron(ctx,x,y,dir,s,col,alpha){
+  ctx.save();ctx.translate(x,y);ctx.rotate(dir);ctx.globalAlpha=alpha;ctx.fillStyle=col;
+  ctx.beginPath();ctx.moveTo(-s,-s);ctx.lineTo(s*0.6,0);ctx.lineTo(-s,s);ctx.lineTo(-s*0.45,0);ctx.closePath();ctx.fill();ctx.restore();
+}
+function makeParts(n,seed){const a=[];let s=seed||1;const rnd=()=>{s=(s*16807)%2147483647;return s/2147483647;};for(let i=0;i<n;i++)a.push({u:rnd(),v:rnd(),ph:rnd()*TAU});return a;}
+function drawParts(ctx,P,x,y,w,h,n,t,rad,colFn){
+  const m=Math.min(P.length,Math.floor(n));
+  for(let i=0;i<m;i++){
+    const p=P[i];
+    const px=x+6+p.u*Math.max(0,w-12)+Math.sin(t*2.3+p.ph)*2.2;
+    const py=y+3+p.v*Math.max(0,h-6)+Math.cos(t*2.7+p.ph*1.3)*(h<30?0.8:2.2);
+    ctx.fillStyle=colFn(i);ctx.beginPath();ctx.arc(px,py,rad,0,TAU);ctx.fill();
+  }
+}
+function spring(ctx,x,y1,y2,w,coils){
+  ctx.beginPath();ctx.moveTo(x,y1);const h=(y2-y1)/(coils*2);
+  for(let i=1;i<=coils*2;i++){ctx.lineTo(x+(i%2?w:-w),y1+h*i);}
+  ctx.lineTo(x,y2);ctx.stroke();
+}
+
+loadColors();
+/* ---------- simulador genérico de motor ---------- */
+class Sim{
+  constructor(root,def){
+    this.def=def;this.root=root;this.angle=def.start||0;this.t=0;
+    this.playing=!reduce;this.speed=1;this.stepMode=false;this.nums=true;this.cardKey=-1;this.tagKey='';
+    root.innerHTML='';root.appendChild($('#tpl-engine').content.cloneNode(true));
+    const q=s=>$(s,root);this.q=q;
+    this.canvas=q('canvas.main');this.ctx=this.canvas.getContext('2d');
+    this.gcanvas=q('canvas.graph');
+    if(def.graph){this.gctx=this.gcanvas.getContext('2d');}else{q('.graphwrap').hidden=true;}
+    this.btnPlay=q('.js-play');this.scrub=q('.js-scrub');this.scrub.max=String(Math.floor(def.total)-1);
+    this.angleOut=q('.js-angle');this.card=q('.js-card');
+    this.chips=def.phases.map((p,i)=>{
+      const b=document.createElement('button');b.type='button';b.className='chip';b.style.setProperty('--c',`var(--${p.key})`);
+      b.innerHTML=`<span class="chip-n">${i+1}</span> ${p.name}`;
+      b.addEventListener('click',()=>this.jump(i));q('.js-chips').appendChild(b);return b;
+    });
+    q('.js-parts').innerHTML=def.parts.map(p=>`<li><b>${p[0]}</b>: ${p[1]}</li>`).join('');
+    q('.js-note').innerHTML=def.note;
+    this.btnPlay.addEventListener('click',()=>this.setPlaying(!this.playing));
+    q('.js-prev').addEventListener('click',()=>this.jump(mod(this.phaseAt(this.angle)-1,def.phases.length)));
+    q('.js-next').addEventListener('click',()=>this.jump(mod(this.phaseAt(this.angle)+1,def.phases.length)));
+    const sp=q('.js-speed'),so=q('.js-speed-out');
+    sp.addEventListener('input',()=>{this.speed=parseFloat(sp.value);so.textContent=this.speed.toFixed(1).replace('.',',')+'×';});
+    q('.js-step').addEventListener('change',e=>{this.stepMode=e.target.checked;});
+    q('.js-nums').addEventListener('change',e=>{this.nums=e.target.checked;this.render();});
+    this.scrub.addEventListener('input',()=>{this.angle=parseFloat(this.scrub.value);this.setPlaying(false);this.render();});
+    this.setPlaying(this.playing);
+    if('ResizeObserver' in window){new ResizeObserver(()=>this.resize()).observe(this.canvas.parentElement);}
+    this.resize();
+  }
+  setPlaying(b){this.playing=b;this.btnPlay.textContent=b?'Pausa':'Reproduzir';}
+  phaseAt(a){const ph=this.def.phases;for(let i=0;i<ph.length;i++){if(a>=ph[i].start&&a<ph[i].end)return i;}return ph.length-1;}
+  jump(i){this.angle=this.def.phases[i].start+0.5;this.setPlaying(true);this.render();}
+  resize(){
+    const d=this.def,dpr=Math.min(2,window.devicePixelRatio||1);
+    const w=Math.max(0,this.canvas.parentElement.clientWidth-12)||560;
+    const k=w/d.LW;this.canvas.style.height=(d.LH*k)+'px';
+    this.canvas.width=Math.round(w*dpr);this.canvas.height=Math.round(d.LH*k*dpr);this.k=k*dpr;
+    if(d.graph){const g=d.graph,gk=w/g.LW;this.gcanvas.style.height=(g.LH*gk)+'px';this.gcanvas.width=Math.round(w*dpr);this.gcanvas.height=Math.round(g.LH*gk*dpr);this.gk=gk*dpr;}
+    this.render();
+  }
+  frame(dt){
+    if(this.playing){
+      this.t+=dt;
+      const d=this.def,i=this.phaseAt(this.angle);
+      let n=this.angle+d.rate*this.speed*dt;
+      if(this.stepMode){const ph=d.phases[i];if(n>=ph.end){n=ph.end-0.001;this.setPlaying(false);}}
+      this.angle=mod(n,d.total);
+    }
+    this.render();
+  }
+  render(){
+    const d=this.def,ctx=this.ctx;if(!this.k)return;
+    ctx.setTransform(this.k,0,0,this.k,0,0);ctx.clearRect(0,0,d.LW,d.LH);
+    d.draw(ctx,this.angle,this.t,this);
+    if(d.graph){const g=this.gctx;g.setTransform(this.gk,0,0,this.gk,0,0);g.clearRect(0,0,d.graph.LW,d.graph.LH);d.graph.draw(g,this.angle);}
+    this.updateUI();
+  }
+  updateUI(){
+    const d=this.def,i=this.phaseAt(this.angle);
+    this.chips.forEach((c,j)=>c.setAttribute('aria-current',j===i?'true':'false'));
+    if(i!==this.cardKey){
+      this.cardKey=i;const p=d.phases[i];
+      this.card.innerHTML=`<h2><span class="dot" style="background:var(--${p.key})"></span>${i+1}. ${p.name}</h2><p class="simple">${p.simple}</p><dl><dt>O que acontece</dt><dd>${p.what}</dd><dt>Porquê</dt><dd>${p.why}</dd></dl><ul class="tags"></ul>`;
+      this.tagsEl=$('.tags',this.card);this.tagKey='';
+    }
+    const tg=d.tags(this.angle);const key=JSON.stringify(tg);
+    if(key!==this.tagKey&&this.tagsEl){this.tagKey=key;this.tagsEl.innerHTML=tg.map(t=>`<li class="tag" data-on="${t[2]}" style="--c:var(--${t[3]||'muted'})"><span>${t[0]}</span><b>${t[1]}</b></li>`).join('');}
+    const sv=String(Math.round(this.angle));if(this.scrub.value!==sv)this.scrub.value=sv;
+    this.angleOut.textContent=d.angleLabel(this.angle);
+  }
+}
+
+/* ================= MOTOR 4 TEMPOS ================= */
+const D4=(()=>{
+  const LW=560,LH=565,cx=280,hy=190,bore=150,half=75,r=58,l=152,pin=34,clr=20;
+  const cyc=hy+clr+pin+r+l, ML=14, N=64, P=makeParts(N,7);
+  const lobe=(a,peak)=>{const d=mod(a-peak+360,720)-360;return Math.abs(d)<90?(1+Math.cos(Math.PI*d/90))/2:0;};
+  function geo(a){const th=a*DEG,sn=Math.sin(th),cs=Math.cos(th);const px=cx+r*sn,py=cyc-r*cs;const pinY=py-Math.sqrt(l*l-r*r*sn*sn);const crown=pinY-pin;return{px,py,pinY,crown,s:crown-(hy+clr)};}
+  const Vof=a=>(clr+geo(a).s)/clr;
+  const pig=0.85*Math.pow(Vof(180)/Vof(360),1.35), pk=pig*3.4;
+  function pres(a){a=mod(a,720);
+    if(a<180)return 0.85;
+    if(a<360)return 0.85*Math.pow(Vof(180)/Vof(a),1.35);
+    if(a<540){if(a<375)return pig*(1+2.4*(a-360)/15);return pk*Math.pow(Vof(375)/Vof(a),1.3);}
+    const p0=pk*Math.pow(Vof(375)/Vof(540),1.3);return 1.1+(p0-1.1)*Math.exp(-(a-540)/9);
+  }
+  function gasState(a){
+    if(a<180){const f=a/180;return{col:C.in,n:N*f,fill:0.10+0.14*f};}
+    if(a<360){const f=(a-180)/180;return{col:mixHex(C.in,C.comp,f),n:N,fill:0.2+0.3*f};}
+    if(a<540){const f=(a-360)/180;const col=f<0.18?mixHex(C.spark,C.pow,f/0.18):mixHex(C.pow,C.exh,(f-0.18)/0.82*0.85);return{col,n:N,fill:0.5-0.28*f};}
+    const f=(a-540)/180;return{col:C.exh,n:N*(1-f),fill:0.22*(1-f)};
+  }
+  function valve(ctx,x,lift){
+    const L=lift*ML, top=hy-98+L;
+    ctx.lineWidth=1.5;ctx.strokeStyle=C.outline;
+    ctx.fillStyle=C.metal2;box(ctx,x-3,top,6,hy+L-top,0);
+    ctx.fillStyle=C.metal;box(ctx,x-20,hy+L,40,5,2);
+    ctx.fillStyle=C.metal2;box(ctx,x-12,hy-86+L,24,4,1);
+    ctx.lineWidth=2;ctx.strokeStyle=C.metal;spring(ctx,x,hy-46,hy-86+L,9,6);
+  }
+  function cam(ctx,x,a,peak,lift){
+    const cy=hy-110, base=90+(a-peak)*0.5;
+    ctx.beginPath();
+    for(let i=0;i<=72;i++){
+      const ang=i*5, d=mod(ang-base+180,360)-180;
+      const f=Math.abs(d)<45?(1+Math.cos(Math.PI*d/45))/2:0, rr=12+14*f;
+      const px=x+rr*Math.cos(ang*DEG), py=cy+rr*Math.sin(ang*DEG);
+      if(i)ctx.lineTo(px,py);else ctx.moveTo(px,py);
+    }
+    ctx.closePath();ctx.fillStyle=C.metal;ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle=C.outline;ctx.stroke();
+    ctx.beginPath();ctx.arc(x,cy,4,0,TAU);ctx.fillStyle=C.outline;ctx.fill();
+  }
+  function draw(ctx,a,t,sim){
+    const g=geo(a),crown=g.crown,li=lobe(a,90),le=lobe(a,630);
+    ctx.lineJoin='round';ctx.lineWidth=2;ctx.strokeStyle=C.outline;ctx.fillStyle=C.block;
+    box(ctx,cx-118,396,236,158,22);
+    box(ctx,cx-half-26,hy-46,2*half+52,396-(hy-46),0);
+    box(ctx,40,hy-52,(cx-half-26)-40,44,0);
+    box(ctx,cx+half+26,hy-52,(LW-40)-(cx+half+26),44,0);
+    ctx.fillStyle=C.hollow;ctx.lineWidth=1.5;
+    box(ctx,cx-half,hy,bore,400-hy,0);
+    box(ctx,cx-98,400,196,142,18);
+    box(ctx,46,hy-46,cx-20-46,32,0,true,false);box(ctx,cx-56,hy-46,36,46,0,true,false);
+    box(ctx,cx+20,hy-46,(LW-46)-(cx+20),32,0,true,false);box(ctx,cx+20,hy-46,36,46,0,true,false);
+    /* contorno dos canais */
+    ctx.beginPath();ctx.moveTo(46,hy-46);ctx.lineTo(cx-56,hy-46);ctx.lineTo(cx-56,hy);ctx.lineTo(cx-20,hy);ctx.lineTo(cx-20,hy-14);ctx.lineTo(46,hy-14);ctx.closePath();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(LW-46,hy-46);ctx.lineTo(cx+56,hy-46);ctx.lineTo(cx+56,hy);ctx.lineTo(cx+20,hy);ctx.lineTo(cx+20,hy-14);ctx.lineTo(LW-46,hy-14);ctx.closePath();ctx.stroke();
+    /* gás na câmara */
+    const gs=gasState(a);
+    ctx.save();ctx.beginPath();ctx.rect(cx-half,hy,bore,Math.max(0,crown-hy));ctx.clip();
+    ctx.fillStyle=rgba(gs.col,gs.fill);ctx.fillRect(cx-half,hy,bore,crown-hy);
+    drawParts(ctx,P,cx-half,hy,bore,crown-hy,gs.n,t,2.4,()=>gs.col);
+    if(a>=360&&a<480){const f=(a-361)/119,fl=clamp(f,0,1);if(a>=361){const rad=18+170*(1-Math.pow(1-fl,2));const gr=ctx.createRadialGradient(cx,hy+6,2,cx,hy+6,rad);gr.addColorStop(0,rgba(C.spark,0.95*(1-fl)));gr.addColorStop(0.5,rgba(C.pow,0.75*(1-fl)));gr.addColorStop(1,rgba(C.pow,0));ctx.fillStyle=gr;ctx.fillRect(cx-half,hy,bore,crown-hy);}}
+    ctx.restore();
+    /* setas de fluxo */
+    const off=a*1.4;
+    if(li>0.03){for(let i=0;i<4;i++){chevron(ctx,62+mod(off+i*40,160),hy-30,0,6,C.in,Math.min(1,li*2));}chevron(ctx,cx-38,hy-24,Math.PI/2,6,C.in,Math.min(1,li*2));}
+    if(le>0.03){for(let i=0;i<4;i++){chevron(ctx,cx+60+mod(off+i*40,160),hy-30,0,6,C.exh,Math.min(1,le*2));}chevron(ctx,cx+38,hy-24,-Math.PI/2,6,C.exh,Math.min(1,le*2));}
+    /* válvulas, cames, vela */
+    valve(ctx,cx-38,li);valve(ctx,cx+38,le);
+    cam(ctx,cx-38,a,90,li);cam(ctx,cx+38,a,630,le);
+    ctx.lineWidth=1.5;ctx.strokeStyle=C.outline;
+    ctx.fillStyle=C.metal2;box(ctx,cx-11,hy-46,22,10,1);box(ctx,cx-8,hy-36,16,38,1);
+    ctx.fillStyle=C.metal;box(ctx,cx-6,hy-78,12,32,2);
+    ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(cx,hy+2);ctx.lineTo(cx,hy+8);ctx.lineTo(cx+7,hy+8);ctx.stroke();
+    const sp=Math.abs(a-360)<6?1-Math.abs(a-360)/6:0;
+    if(sp>0){ctx.save();ctx.globalAlpha=sp;const gr=ctx.createRadialGradient(cx,hy+8,1,cx,hy+8,26);gr.addColorStop(0,C.spark);gr.addColorStop(1,rgba(C.spark,0));ctx.fillStyle=gr;ctx.beginPath();ctx.arc(cx,hy+8,26,0,TAU);ctx.fill();ctx.strokeStyle=C.spark;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(cx,hy+8);ctx.lineTo(cx+8,hy+16);ctx.lineTo(cx-4,hy+22);ctx.lineTo(cx+6,hy+32);ctx.stroke();ctx.restore();}
+    /* PMS / PMI */
+    ctx.strokeStyle=C.muted;ctx.lineWidth=1;ctx.setLineDash([4,4]);
+    const yT=hy+clr,yB=hy+clr+2*r;
+    [yT,yB].forEach(y=>{ctx.beginPath();ctx.moveTo(cx+half+26,y);ctx.lineTo(cx+half+48,y);ctx.stroke();});
+    ctx.setLineDash([]);
+    halo(ctx,'PMS',cx+half+52,yT,12,'left',C.muted);halo(ctx,'PMI',cx+half+52,yB,12,'left',C.muted);
+    /* pistão */
+    const L=cx-half+2,R=cx+half-2;
+    ctx.lineWidth=2;ctx.strokeStyle=C.outline;ctx.fillStyle=C.metal;
+    box(ctx,L,crown,R-L,16,2);box(ctx,L,crown,10,70,2);box(ctx,R-10,crown,10,70,2);
+    ctx.lineWidth=1.5;ctx.strokeStyle=C.outline;
+    [6,11,16].forEach(o=>{ctx.beginPath();ctx.moveTo(L,crown+o);ctx.lineTo(R,crown+o);ctx.stroke();});
+    /* biela e cambota */
+    const dx=g.px-cx,dy=g.py-g.pinY,len=Math.hypot(dx,dy),nx=-dy/len,ny=dx/len;
+    ctx.fillStyle=C.metal2;ctx.strokeStyle=C.outline;ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx+nx*8,g.pinY+ny*8);ctx.lineTo(g.px+nx*12,g.py+ny*12);ctx.lineTo(g.px-nx*12,g.py-ny*12);ctx.lineTo(cx-nx*8,g.pinY-ny*8);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle=C.metal;ctx.beginPath();ctx.arc(cx,g.pinY,10,0,TAU);ctx.fill();ctx.stroke();
+    ctx.lineWidth=1;ctx.strokeStyle=C.muted;ctx.setLineDash([3,4]);ctx.beginPath();ctx.arc(cx,cyc,r,0,TAU);ctx.stroke();ctx.setLineDash([]);
+    const th=a*DEG,ux=Math.sin(th),uy=-Math.cos(th);
+    ctx.fillStyle=C.metal2;ctx.strokeStyle=C.outline;ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx,cyc);ctx.arc(cx,cyc,44,Math.atan2(-uy,-ux)-1.0,Math.atan2(-uy,-ux)+1.0);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx+uy*12,cyc-ux*12);ctx.lineTo(g.px+uy*10,g.py-ux*10);ctx.lineTo(g.px-uy*10,g.py+ux*10);ctx.lineTo(cx-uy*12,cyc+ux*12);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle=C.metal;ctx.beginPath();ctx.arc(cx,cyc,16,0,TAU);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.arc(g.px,g.py,12,0,TAU);ctx.fill();ctx.stroke();
+    ctx.fillStyle=C.outline;ctx.beginPath();ctx.arc(g.px,g.py,4,0,TAU);ctx.fill();ctx.beginPath();ctx.arc(cx,cyc,5,0,TAU);ctx.fill();
+    if(sim.nums){
+      marker(ctx,1,cx,hy-142);marker(ctx,2,cx-78,hy-70);marker(ctx,3,cx+78,hy-70);marker(ctx,4,cx+22,hy-62);
+      marker(ctx,5,cx-half-13,hy+110);marker(ctx,6,cx,crown+44);marker(ctx,7,(cx+g.px)/2+22,(g.pinY+g.py)/2);marker(ctx,8,cx,cyc);
+    }
+  }
+  const SH=['Admissão','Compressão','Combustão','Escape'],KC=['in','comp','pow','exh'];
+  const graph={LW:560,LH:150,draw(ctx,a){
+    const l0=40,r0=12,t0=16,b0=26,W=560-l0-r0,H=150-t0-b0;
+    const X=v=>l0+v/720*W,Y=p=>t0+H*(1-p/40);
+    ctx.font=`700 12px ${FONT}`;ctx.textBaseline='middle';
+    for(let i=0;i<4;i++){ctx.fillStyle=rgba(C[KC[i]],0.13);ctx.fillRect(X(i*180),t0,W/4,H);ctx.fillStyle=C.muted;ctx.textAlign='center';ctx.fillText(`${i+1} ${SH[i]}`,X(i*180+90),150-9);}
+    ctx.strokeStyle=C.line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(l0,t0);ctx.lineTo(l0,t0+H);ctx.lineTo(l0+W,t0+H);ctx.stroke();
+    ctx.textAlign='right';ctx.fillStyle=C.muted;ctx.fillText('alta',l0-4,t0+6);ctx.fillText('baixa',l0-4,t0+H-4);
+    ctx.lineWidth=3;ctx.lineJoin='round';
+    for(let i=0;i<4;i++){ctx.strokeStyle=C[KC[i]];ctx.beginPath();for(let v=i*180;v<=i*180+180;v+=3){const x=X(v),y=Y(pres(v));if(v===i*180)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();}
+    const x=X(a),y=Y(pres(a));ctx.strokeStyle=C.text;ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(x,t0);ctx.lineTo(x,t0+H);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=C.text;ctx.beginPath();ctx.arc(x,y,5,0,TAU);ctx.fill();ctx.strokeStyle=C.panel;ctx.lineWidth=2;ctx.stroke();
+  }};
+  return{LW,LH,total:720,rate:90,graph,draw,
+    angleLabel:a=>`Cambota ${Math.round(a%360)}° · volta ${a<360?1:2} de 2`,
+    tags:a=>{const li=lobe(a,90),le=lobe(a,630),sp=Math.abs(a-360)<6;const dn=(a<180||(a>=360&&a<540));
+      return[['Válvula de admissão',li>0.04?'aberta':'fechada',li>0.04,'in'],['Válvula de escape',le>0.04?'aberta':'fechada',le>0.04,'exh'],['Vela',sp?'faísca':'sem faísca',sp,'pow'],['Pistão',dn?'a descer':'a subir',false,'']];},
+    phases:[
+      {key:'in',name:'Admissão',start:0,end:180,simple:'É como inspirar: o cilindro enche-se de ar e combustível.',
+        what:'A válvula de admissão abre e o pistão desce. Ao descer, o volume do cilindro aumenta e cria uma depressão que aspira a mistura de ar e combustível. A válvula de escape está fechada.',
+        why:'Quanto mais mistura entrar, mais energia se pode libertar depois. Por isso um filtro de ar sujo ou uma admissão obstruída fazem perder potência.'},
+      {key:'comp',name:'Compressão',start:180,end:360,simple:'É como prender a respiração e apertar o peito: a mistura é espremida.',
+        what:'As duas válvulas fecham e o pistão sobe, comprimindo a mistura até cerca de 1/7 do volume inicial (neste modelo, taxa de compressão de 7:1). A pressão e a temperatura sobem. Perto do ponto morto superior (PMS) a vela faz a faísca.',
+        why:'Uma mistura comprimida arde mais depressa e com mais força. Se houver fugas (segmentos ou válvulas gastos) perde-se potência, e é por isso que se faz o teste de compressão diferencial na manutenção.'},
+      {key:'pow',name:'Combustão e expansão',start:360,end:540,simple:'É o espirro: a explosão controlada que empurra o pistão.',
+        what:'A vela inflama a mistura (na realidade, um pouco antes do PMS). A pressão dispara e empurra o pistão para baixo. A biela transforma esse movimento de sobe-e-desce na rotação da cambota. As duas válvulas estão fechadas.',
+        why:'Este é o único tempo que produz trabalho. Nos outros três, o motor gasta energia guardada no movimento da cambota e da hélice. Com vários cilindros desfasados há sempre algum a empurrar.'},
+      {key:'exh',name:'Escape',start:540,end:720,simple:'É como expirar: os gases queimados são empurrados para fora.',
+        what:'A válvula de escape abre e o pistão sobe, empurrando os gases queimados para o tubo de escape. No fim, a válvula de admissão volta a abrir e o ciclo recomeça.',
+        why:'Se os gases queimados ficarem no cilindro, estragam a mistura nova. Em muitos aviões ligeiros o calor do escape também aquece a cabina e o ar do carburador.'}
+    ],
+    parts:[['Árvore de cames','roda a metade da velocidade da cambota e empurra as válvulas para abrirem na altura certa.'],['Válvula de admissão','abre para deixar entrar a mistura.'],['Válvula de escape','abre para deixar sair os gases queimados.'],['Vela','faz a faísca que inflama a mistura.'],['Cilindro e cabeça','onde a mistura é comprimida e arde.'],['Pistão','sobe e desce no cilindro; os segmentos (anéis) vedam a folga.'],['Biela','liga o pistão à cambota.'],['Cambota','transforma o sobe-e-desce em rotação e roda a hélice.']],
+    note:'<b>Na aviação</b><p>Os motores dos aviões ligeiros (Lycoming, Continental, Rotax 912) são de 4 tempos: cada cilindro só produz trabalho uma vez em cada 2 voltas da cambota. Por segurança têm ignição dupla (2 magnetos e 2 velas por cilindro).</p>'
+  };
+})();
+
+/* ================= MOTOR 2 TEMPOS ================= */
+const D2=(()=>{
+  const LW=560,LH=440,cx=280,hy=96,half=62,r=50,l=128,pin=30,clr=16;
+  const cyc=hy+clr+pin+r+l, N=56, PC=makeParts(N,11), PK=makeParts(46,23);
+  const EX_TOP=hy+clr+54, EX_BOT=EX_TOP+44, TR_TOP=hy+clr+68, TR_BOT=TR_TOP+30;
+  function geo(a){const th=a*DEG,sn=Math.sin(th),cs=Math.cos(th);const px=cx+r*sn,py=cyc-r*cs;const pinY=py-Math.sqrt(l*l-r*r*sn*sn);return{px,py,pinY,crown:pinY-pin};}
+  function findTheta(y){let lo=0,hi=180;for(let i=0;i<40;i++){const m=(lo+hi)/2;if(geo(m).crown>y)hi=m;else lo=m;}return(lo+hi)/2;}
+  const tEx=findTheta(EX_TOP), tTr=findTheta(TR_TOP);
+  const TOPC=hy+clr, BOTC=hy+clr+2*r;
+  function cylState(a,crown){
+    const falling=a<180,exO=crown>EX_TOP,trO=crown>TR_TOP;
+    if(falling&&!exO){const f=a/tEx;const col=f<0.2?mixHex(C.spark,C.pow,f/0.2):mixHex(C.pow,C.exh,(f-0.2)/0.8*0.8);return{col,fill:0.5-0.2*f,n:N,mixf:0};}
+    if(!trO&&exO&&falling){return{col:C.exh,fill:0.3,n:N*0.9,mixf:0};}
+    if(trO){const f=clamp((crown-TR_TOP)/28,0,1)*0.85;return{col:C.exh,fill:0.3,n:N,mixf:f};}
+    if(exO){return{col:C.exh,fill:0.28,n:N,mixf:0.85};}
+    const f=clamp(1-(crown-TOPC)/(EX_TOP-TOPC),0,1);return{col:mixHex(C.in,C.comp,f),fill:0.2+0.3*f,n:N,mixf:0};
+  }
+  function draw(ctx,a,t,sim){
+    const g=geo(a),crown=g.crown,rising=a>180&&a<360;
+    const exO=crown>EX_TOP,trO=crown>TR_TOP;
+    const cn=clamp((crown-TOPC)/(BOTC-TOPC),0,1);
+    ctx.lineJoin='round';ctx.lineWidth=2;ctx.strokeStyle=C.outline;ctx.fillStyle=C.block;
+    box(ctx,168,270,224,142,24);
+    box(ctx,194,66,188,204,0);
+    box(ctx,40,EX_TOP-8,194-40,60,0);
+    box(ctx,40,330,128,52,0);
+    ctx.fillStyle=C.hollow;ctx.lineWidth=1.5;
+    box(ctx,cx-half,hy,2*half,284-hy,0);
+    box(ctx,188,284,184,108,18);
+    box(ctx,46,EX_TOP-2,194-46,48,0,true,false);
+    box(ctx,346,TR_TOP-6,26,284-(TR_TOP-6),0);
+    box(ctx,46,336,142,40,0,true,false);
+    ctx.beginPath();ctx.moveTo(46,EX_TOP-2);ctx.lineTo(194,EX_TOP-2);ctx.moveTo(46,EX_TOP+46);ctx.lineTo(194,EX_TOP+46);ctx.moveTo(46,336);ctx.lineTo(188,336);ctx.moveTo(46,376);ctx.lineTo(188,376);ctx.stroke();
+    /* gás do cárter */
+    const pistBot=crown+64;
+    const kc=rgba(C.in,0.28+0.42*cn);
+    ctx.fillStyle=kc;
+    ctx.fillRect(cx-half,pistBot,2*half,284-pistBot);ctx.fillRect(188,284,184,108);ctx.fillRect(346,TR_TOP-6,26,284-(TR_TOP-6));
+    drawParts(ctx,PK,190,290,180,96,PK.length,t,1.6+1.0*cn,()=>rgba(C.in,0.6+0.4*cn));
+    /* gás no cilindro */
+    const gs=cylState(a,crown);
+    ctx.save();ctx.beginPath();ctx.rect(cx-half,hy,2*half,Math.max(0,crown-hy));ctx.clip();
+    ctx.fillStyle=rgba(gs.col,gs.fill);ctx.fillRect(cx-half,hy,2*half,crown-hy);
+    drawParts(ctx,PC,cx-half,hy,2*half,crown-hy,gs.n,t,2.3,i=>(i/N<gs.mixf?C.in:gs.col));
+    if(a<100){const fl=clamp(a/90,0,1);const rad=14+130*(1-Math.pow(1-fl,2));const gr=ctx.createRadialGradient(cx,hy+6,2,cx,hy+6,rad);gr.addColorStop(0,rgba(C.spark,0.95*(1-fl)));gr.addColorStop(0.5,rgba(C.pow,0.7*(1-fl)));gr.addColorStop(1,rgba(C.pow,0));ctx.fillStyle=gr;ctx.fillRect(cx-half,hy,2*half,crown-hy);}
+    ctx.restore();
+    /* luminas (aberturas visíveis) */
+    ctx.lineWidth=1.5;ctx.strokeStyle=C.outline;
+    if(exO){const y2=Math.min(crown,EX_BOT);ctx.fillStyle=rgba(C.exh,0.4);box(ctx,194,EX_TOP,24,y2-EX_TOP,0,true,false);ctx.fillStyle=C.hollow;ctx.globalAlpha=0.0;ctx.globalAlpha=1;}
+    if(trO){const y2=Math.min(crown,TR_BOT);ctx.fillStyle=rgba(C.in,0.45);box(ctx,342,TR_TOP,4,y2-TR_TOP,0,true,false);}
+    const exOpenH=exO?Math.min(crown,EX_BOT)-EX_TOP:0;
+    if(exO){ctx.fillStyle=C.hollow;ctx.fillRect(194,EX_TOP,24,exOpenH);ctx.fillStyle=rgba(C.exh,0.45);ctx.fillRect(194,EX_TOP,24,exOpenH);}
+    if(trO){const th2=Math.min(crown,TR_BOT)-TR_TOP;ctx.fillStyle=C.hollow;ctx.fillRect(342,TR_TOP,4,th2);ctx.fillStyle=rgba(C.in,0.5);ctx.fillRect(342,TR_TOP,4,th2);}
+    /* setas */
+    const off=a*1.5;
+    if(rising){for(let i=0;i<3;i++)chevron(ctx,60+mod(off+i*44,120),356,0,6,C.in,0.95);}
+    if(trO){for(let i=0;i<3;i++)chevron(ctx,359,TR_TOP+(284-TR_TOP)-mod(off+i*44,130)+10,-Math.PI/2,6,C.in,clamp((crown-TR_TOP)/10,0,1));}
+    if(exO){for(let i=0;i<3;i++)chevron(ctx,190-mod(off+i*44,130),EX_TOP+22,Math.PI,6,C.exh,clamp((crown-EX_TOP)/10,0,1));}
+    /* válvula de lâminas */
+    ctx.strokeStyle=C.metal;ctx.lineWidth=5;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(186,338);
+    if(rising){ctx.lineTo(186+Math.sin(0.55)*30,338+Math.cos(0.55)*30);}else ctx.lineTo(186,372);ctx.stroke();ctx.lineCap='butt';
+    /* vela */
+    ctx.lineWidth=1.5;ctx.strokeStyle=C.outline;ctx.fillStyle=C.metal2;box(ctx,cx-11,hy-34,22,10,1);box(ctx,cx-8,hy-24,16,26,1);ctx.fillStyle=C.metal;box(ctx,cx-6,hy-62,12,30,2);
+    ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(cx,hy+2);ctx.lineTo(cx,hy+8);ctx.lineTo(cx+7,hy+8);ctx.stroke();
+    const d0=Math.min(a,360-a),sp=d0<6?1-d0/6:0;
+    if(sp>0){ctx.save();ctx.globalAlpha=sp;const gr=ctx.createRadialGradient(cx,hy+8,1,cx,hy+8,24);gr.addColorStop(0,C.spark);gr.addColorStop(1,rgba(C.spark,0));ctx.fillStyle=gr;ctx.beginPath();ctx.arc(cx,hy+8,24,0,TAU);ctx.fill();ctx.strokeStyle=C.spark;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(cx,hy+8);ctx.lineTo(cx+8,hy+16);ctx.lineTo(cx-4,hy+22);ctx.stroke();ctx.restore();}
+    /* PMS / PMI */
+    ctx.strokeStyle=C.muted;ctx.lineWidth=1;ctx.setLineDash([4,4]);
+    [TOPC,BOTC].forEach(y=>{ctx.beginPath();ctx.moveTo(392,y);ctx.lineTo(412,y);ctx.stroke();});ctx.setLineDash([]);
+    halo(ctx,'PMS',416,TOPC,12,'left',C.muted);halo(ctx,'PMI',416,BOTC,12,'left',C.muted);
+    /* pistão */
+    const L=cx-half+2,R=cx+half-2;
+    ctx.lineWidth=2;ctx.strokeStyle=C.outline;ctx.fillStyle=C.metal;
+    box(ctx,L,crown,R-L,14,2);box(ctx,L,crown,9,64,2);box(ctx,R-9,crown,9,64,2);
+    ctx.lineWidth=1.5;[5,10].forEach(o=>{ctx.beginPath();ctx.moveTo(L,crown+o);ctx.lineTo(R,crown+o);ctx.stroke();});
+    /* biela e cambota */
+    const dx=g.px-cx,dy=g.py-g.pinY,len=Math.hypot(dx,dy),nx=-dy/len,ny=dx/len;
+    ctx.fillStyle=C.metal2;ctx.strokeStyle=C.outline;ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx+nx*7,g.pinY+ny*7);ctx.lineTo(g.px+nx*11,g.py+ny*11);ctx.lineTo(g.px-nx*11,g.py-ny*11);ctx.lineTo(cx-nx*7,g.pinY-ny*7);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle=C.metal;ctx.beginPath();ctx.arc(cx,g.pinY,9,0,TAU);ctx.fill();ctx.stroke();
+    const th=a*DEG,ux=Math.sin(th),uy=-Math.cos(th);
+    ctx.fillStyle=C.metal2;
+    ctx.beginPath();ctx.moveTo(cx,cyc);ctx.arc(cx,cyc,40,Math.atan2(-uy,-ux)-1.0,Math.atan2(-uy,-ux)+1.0);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx+uy*10,cyc-ux*10);ctx.lineTo(g.px+uy*9,g.py-ux*9);ctx.lineTo(g.px-uy*9,g.py+ux*9);ctx.lineTo(cx-uy*10,cyc+ux*10);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle=C.metal;ctx.beginPath();ctx.arc(cx,cyc,14,0,TAU);ctx.fill();ctx.stroke();ctx.beginPath();ctx.arc(g.px,g.py,11,0,TAU);ctx.fill();ctx.stroke();
+    ctx.fillStyle=C.outline;ctx.beginPath();ctx.arc(g.px,g.py,4,0,TAU);ctx.fill();ctx.beginPath();ctx.arc(cx,cyc,4,0,TAU);ctx.fill();
+    if(sim.nums){
+      marker(ctx,1,cx+26,hy-48);marker(ctx,2,206,EX_TOP-16);marker(ctx,3,359,TR_TOP-22);marker(ctx,4,112,316);
+      marker(ctx,5,cx,crown+34);marker(ctx,6,cx+80,372);marker(ctx,7,(cx+g.px)/2+20,(g.pinY+g.py)/2);marker(ctx,8,cx,cyc);
+    }
+  }
+  const T=[0,tEx,tTr,360-tTr,360-tEx,360];
+  return{LW,LH,total:360,rate:90,draw,
+    angleLabel:a=>`Cambota ${Math.round(a)}° · ${a>180?'a subir':'a descer'}`,
+    tags:a=>{const g=geo(a),rs=a>180&&a<360;return[['Lumina de escape',g.crown>EX_TOP?'aberta':'fechada',g.crown>EX_TOP,'exh'],['Lumina de transferência',g.crown>TR_TOP?'aberta':'fechada',g.crown>TR_TOP,'in'],['Válvula de lâminas (cárter)',rs?'aberta':'fechada',rs,'in'],['Pistão',rs?'a subir':'a descer',false,'']];},
+    phases:[
+      {key:'pow',name:'Combustão e expansão',start:T[0],end:T[1],simple:'Faísca e empurrão: o pistão desce.',
+        what:'A vela inflama a mistura comprimida e a pressão empurra o pistão para baixo. É aqui que o motor produz trabalho. Em simultâneo, por baixo, o pistão comprime a mistura nova que está no cárter: o cárter funciona como uma bomba.',
+        why:'No 2 tempos há uma combustão em cada volta da cambota. Por isso dá muita potência para o peso, mas todas as outras funções têm de caber na mesma volta.'},
+      {key:'exh',name:'Escape',start:T[1],end:T[2],simple:'O pistão abre a janela de saída e os gases queimados fogem.',
+        what:'O pistão desce o suficiente para destapar a lumina de escape. Os gases queimados, ainda com pressão, saem por ela e a pressão no cilindro cai.',
+        why:'Não há válvulas: é o próprio pistão que abre e fecha as luminas. Tem de abrir o escape antes da transferência, para a pressão cair e a mistura nova poder entrar.'},
+      {key:'in',name:'Transferência e lavagem',start:T[2],end:T[3],simple:'A mistura nova do cárter sobe e empurra os gases velhos para fora.',
+        what:'O pistão destapa a lumina de transferência. A mistura nova, comprimida no cárter, sobe pelo canal e entra no cilindro, empurrando os gases queimados para o escape (a «lavagem»). Depois do PMI o pistão começa a subir, e a lavagem continua até a transferência ser tapada. Por baixo, a subida cria depressão no cárter e a válvula de lâminas abre: entra mistura nova.',
+        why:'Este é o passo que substitui a admissão e o escape do 4 tempos. É também o ponto fraco: lavagem e escape coincidem, e por isso o 2 tempos desperdiça um pouco de mistura.'},
+      {key:'exh',name:'Fim da lavagem',start:T[3],end:T[4],simple:'A entrada fecha, mas a saída ainda está aberta.',
+        what:'O pistão já tapou a lumina de transferência, mas a de escape ainda está aberta. Parte da mistura nova pode escapar com os gases. O cárter continua a encher.',
+        why:'Este desperdício é uma das razões do maior consumo do 2 tempos. Os tubos de escape «afinados» tentam devolver ao cilindro a mistura que fugia.'},
+      {key:'comp',name:'Compressão',start:T[4],end:T[5],simple:'O pistão tapa tudo e aperta a mistura.',
+        what:'O pistão tapa a lumina de escape e comprime a mistura. Perto do PMS a vela faz a faísca e o ciclo recomeça. Por baixo, o cárter continua a encher.',
+        why:'Só agora o cilindro está selado. Se as luminas estiverem com carvão ou os segmentos gastos, a compressão cai e o motor perde força.'}
+    ],
+    parts:[['Vela','faz a faísca que inflama a mistura.'],['Lumina de escape','abertura na parede do cilindro por onde saem os gases queimados.'],['Lumina de transferência (canal)','leva a mistura nova do cárter para o cilindro.'],['Válvula de lâminas e entrada','deixa entrar mistura no cárter quando há depressão e fecha quando o cárter é comprimido.'],['Pistão','sobe e desce e abre/fecha as luminas (faz o trabalho das válvulas).'],['Cárter','espaço por baixo do pistão: funciona como bomba que comprime a mistura nova.'],['Biela','liga o pistão à cambota.'],['Cambota','transforma o sobe-e-desce em rotação.']],
+    note:'<b>Na aviação</b><p>O 2 tempos é leve e simples e moveu muitos ultraleves e drones pequenos. Gasta mais combustível e é menos eficiente do que o 4 tempos, por isso a aviação certificada usa quase só 4 tempos. A lubrificação faz-se com óleo misturado no combustível ou injetado.</p>'
+  };
+})();
+
+/* ================= WANKEL ================= */
+const DW=(()=>{
+  const LW=560,LH=570,cx=280,cy=290,R=150,e=21,MID=0.71;
+  const H=u=>[e*Math.cos(3*u)+R*Math.cos(u),e*Math.sin(3*u)+R*Math.sin(u)];
+  const PT=(p)=>[cx+p[0],cy-p[1]];
+  const HP=[];for(let i=0;i<=360;i++)HP.push(H(i/360*TAU));
+  const hAt=psi=>{let best=0,bd=9;for(let i=0;i<360;i++){let d=Math.abs(mod(Math.atan2(HP[i][1],HP[i][0])/DEG-psi+180,360)-180);if(d<bd){bd=d;best=i;}}return HP[best];};
+  const NAMES=['Admissão','Compressão','Combustão','Escape'],KEYS=['in','comp','pow','exh'];
+  function state(phi){
+    const ph=(phi+630)*DEG,al=ph/3,Cc=[e*Math.cos(ph),e*Math.sin(ph)];
+    const ch=[];
+    for(let k=0;k<3;k++){
+      const u0=al+TAU*k/3,A=H(u0),B=H(u0+TAU/3),aa=al+Math.PI/3+TAU*k/3,d=[Math.cos(aa),Math.sin(aa)];
+      const ctrl=[Cc[0]+d[0]*2*(MID-0.25)*R,Cc[1]+d[1]*2*(MID-0.25)*R];
+      const fl=[];for(let j=0;j<=24;j++){const s=j/24,m=1-s;fl.push([m*m*A[0]+2*m*s*ctrl[0]+s*s*B[0],m*m*A[1]+2*m*s*ctrl[1]+s*s*B[1]]);}
+      const arc=[];for(let j=0;j<=40;j++)arc.push(H(u0+TAU/3*j/40));
+      const psi=mod((phi+630)/3+60+120*k,360),q=mod(psi-270,360)/90;
+      ch.push({k,A,B,ctrl,fl,arc,q,d,aa});
+    }
+    return{ph,al,Cc,ch};
+  }
+  function style(q){
+    const i=Math.floor(q)%4,f=q-Math.floor(q);
+    if(i===0)return{col:C.in,al:0.28+0.3*f,i};
+    if(i===1)return{col:mixHex(C.in,C.comp,f),al:0.5+0.25*f,i};
+    if(i===2){const col=f<0.18?mixHex(C.spark,C.pow,f/0.18):mixHex(C.pow,C.exh,(f-0.18)/0.82*0.8);return{col,al:0.75-0.3*f,i};}
+    return{col:C.exh,al:0.5-0.25*f,i};
+  }
+  function polyArea(p){let s=0;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];s+=a[0]*b[1]-b[0]*a[1];}return Math.abs(s)/2;}
+  const INP=hAt(312),EXP=hAt(228),TOPP=H(Math.PI/2);
+  function port(ctx,p,ang){
+    ctx.save();ctx.translate(cx+p[0],cy-p[1]);ctx.rotate(Math.atan2(p[1],p[0])*-1);
+    ctx.fillStyle=C.hollow;ctx.strokeStyle=C.outline;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.rect(-6,-15,130,30);ctx.fill();
+    ctx.beginPath();ctx.moveTo(-6,-15);ctx.lineTo(124,-15);ctx.moveTo(-6,15);ctx.lineTo(124,15);ctx.stroke();
+    ctx.restore();
+  }
+  function draw(ctx,phi,t,sim){
+    const S=state(phi);
+    ctx.lineJoin='round';
+    /* bloco com cavidade epitrocoidal */
+    ctx.fillStyle=C.block;ctx.strokeStyle=C.outline;ctx.lineWidth=2;
+    ctx.beginPath();ctx.rect(cx-215,98,430,420);
+    HP.forEach((p,i)=>{const q=PT(p);if(i)ctx.lineTo(q[0],q[1]);else ctx.moveTo(q[0],q[1]);});ctx.closePath();
+    ctx.fill('evenodd');
+    ctx.beginPath();ctx.rect(cx-215,98,430,420);ctx.stroke();
+    ctx.fillStyle=C.hollow;ctx.beginPath();HP.forEach((p,i)=>{const q=PT(p);if(i)ctx.lineTo(q[0],q[1]);else ctx.moveTo(q[0],q[1]);});ctx.closePath();ctx.fill();
+    port(ctx,INP);port(ctx,EXP);
+    /* plug */
+    const tp=PT(TOPP);
+    ctx.fillStyle=C.hollow;ctx.lineWidth=1.5;box(ctx,tp[0]-12,98,24,tp[1]-98,0);
+    ctx.fillStyle=C.metal2;box(ctx,tp[0]-9,104,18,tp[1]-104-2,1);ctx.fillStyle=C.metal;box(ctx,tp[0]-6,86,12,30,2);
+    /* câmaras */
+    const labs=[];
+    S.ch.forEach(c=>{
+      const poly=c.arc.concat(c.fl.slice().reverse());const st=style(c.q);
+      ctx.beginPath();poly.forEach((p,i)=>{const q=PT(p);if(i)ctx.lineTo(q[0],q[1]);else ctx.moveTo(q[0],q[1]);});ctx.closePath();
+      ctx.fillStyle=rgba(st.col,st.al);ctx.fill();
+      const ar=polyArea(poly);
+      let mx=0,my=0;poly.forEach(p=>{mx+=p[0];my+=p[1];});mx/=poly.length;my/=poly.length;
+      labs.push({txt:NAMES[st.i],x:cx+mx,y:cy-my,ar,st,k:c.k});
+    });
+    /* rotor */
+    const rc=PT(S.Cc);
+    ctx.beginPath();
+    S.ch.forEach((c,i)=>{const A=PT(c.A),B=PT(c.B),Q=PT(c.ctrl);if(i===0)ctx.moveTo(A[0],A[1]);ctx.quadraticCurveTo(Q[0],Q[1],B[0],B[1]);});
+    ctx.closePath();ctx.fillStyle=C.metal;ctx.fill();ctx.strokeStyle=C.outline;ctx.lineWidth=2.5;ctx.stroke();
+    /* flanco A destacado */
+    const c0=S.ch[0];ctx.beginPath();{const A=PT(c0.A),B=PT(c0.B),Q=PT(c0.ctrl);ctx.moveTo(A[0],A[1]);ctx.quadraticCurveTo(Q[0],Q[1],B[0],B[1]);}
+    ctx.strokeStyle=C.text;ctx.lineWidth=5;ctx.stroke();
+    /* furo do rotor, engrenagens, excêntrico */
+    ctx.fillStyle=C.hollow;ctx.strokeStyle=C.outline;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(rc[0],rc[1],3*e,0,TAU);ctx.fill();ctx.stroke();
+    ctx.setLineDash([3,3]);ctx.lineWidth=4;ctx.strokeStyle=C.metal2;ctx.beginPath();ctx.arc(rc[0],rc[1],3*e-3,0,TAU);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=C.metal2;ctx.lineWidth=1.5;ctx.strokeStyle=C.outline;ctx.beginPath();ctx.arc(cx,cy,2*e,0,TAU);ctx.fill();ctx.stroke();
+    ctx.setLineDash([3,3]);ctx.lineWidth=4;ctx.strokeStyle=C.metal;ctx.beginPath();ctx.arc(cx,cy,2*e+3,0,TAU);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=C.metal;ctx.strokeStyle=C.outline;ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(rc[0],rc[1],e-1,0,TAU);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(rc[0],rc[1]);ctx.lineWidth=6;ctx.strokeStyle=C.outline;ctx.stroke();
+    ctx.fillStyle=C.outline;ctx.beginPath();ctx.arc(cx,cy,6,0,TAU);ctx.fill();
+    /* vértices */
+    S.ch.forEach(c=>{const a=PT(c.A);ctx.fillStyle=C.outline;ctx.beginPath();ctx.arc(a[0],a[1],4.5,0,TAU);ctx.fill();});
+    /* letras nos flancos */
+    S.ch.forEach(c=>{const m=PT([S.Cc[0]+c.d[0]*R*0.5,S.Cc[1]+c.d[1]*R*0.5]);halo(ctx,'ABC'[c.k],m[0],m[1],16,'center',C.outline);});
+    /* etiquetas das câmaras */
+    labs.forEach(l=>{if(l.ar>2600)halo(ctx,l.txt,l.x,l.y,12,'center',C.text);});
+    /* faísca */
+    let sp=0;S.ch.forEach(c=>{const dq=Math.abs(c.q-2);if(dq<0.09)sp=Math.max(sp,1-dq/0.09);});
+    if(sp>0){ctx.save();ctx.globalAlpha=sp;const gr=ctx.createRadialGradient(tp[0],tp[1]+4,1,tp[0],tp[1]+4,26);gr.addColorStop(0,C.spark);gr.addColorStop(1,rgba(C.spark,0));ctx.fillStyle=gr;ctx.beginPath();ctx.arc(tp[0],tp[1]+4,26,0,TAU);ctx.fill();ctx.strokeStyle=C.spark;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(tp[0],tp[1]);ctx.lineTo(tp[0]+7,tp[1]+10);ctx.lineTo(tp[0]-4,tp[1]+16);ctx.stroke();ctx.restore();}
+    /* setas das janelas */
+    const off=phi*0.5;
+    [[INP,C.in,1],[EXP,C.exh,-1]].forEach(([p,col,dir])=>{
+      const ang=Math.atan2(-p[1],p[0]);
+      for(let i=0;i<3;i++){const s=mod(off+i*38,114);const dd=dir>0?114-s:s;
+        const x=cx+p[0]+Math.cos(ang)*(dd+8),y=cy-p[1]+Math.sin(ang)*(dd+8);
+        chevron(ctx,x,y,dir>0?ang+Math.PI:ang,6,col,0.95);}
+    });
+    halo(ctx,'Admissão',cx+INP[0]+Math.cos(Math.atan2(-INP[1],INP[0]))*136,cy-INP[1]+Math.sin(Math.atan2(-INP[1],INP[0]))*136+12,13,'center',C.in);
+    halo(ctx,'Escape',cx+EXP[0]+Math.cos(Math.atan2(-EXP[1],EXP[0]))*136,cy-EXP[1]+Math.sin(Math.atan2(-EXP[1],EXP[0]))*136+12,13,'center',C.exh);
+    halo(ctx,'Vela',tp[0]+34,tp[1]-30,13,'left',C.muted);
+    if(sim.nums){
+      const m=PT([S.Cc[0]+c0.d[0]*R*0.3,S.Cc[1]+c0.d[1]*R*0.3]);
+      marker(ctx,1,PT([S.Cc[0]+S.ch[1].d[0]*R*0.3,S.Cc[1]+S.ch[1].d[1]*R*0.3])[0],PT([S.Cc[0]+S.ch[1].d[0]*R*0.3,S.Cc[1]+S.ch[1].d[1]*R*0.3])[1]);
+      marker(ctx,2,cx-200,cy);marker(ctx,3,cx,cy+ (0));
+      marker(ctx,4,tp[0]+18,tp[1]-52);
+      marker(ctx,5,cx+INP[0]+60,cy-INP[1]+70);marker(ctx,6,cx+EXP[0]-60,cy-EXP[1]+70);
+      marker(ctx,7,cx-38,cy+38);
+      const a0=PT(S.ch[2].A);marker(ctx,8,a0[0],a0[1]);
+    }
+  }
+  return{LW,LH,total:1080,rate:100,draw,
+    angleLabel:p=>`Veio ${Math.round(p%360)}° · volta ${Math.floor(p/360)+1} de 3`,
+    tags:p=>{const q=mod((p+630)/3+60-270,360)/90,i=Math.floor(q)%4;return[['Face A',NAMES[i],true,KEYS[i]],['Rotor',Math.round(mod((p+630)/3,360))+'°',false,''],['Veio excêntrico',Math.round(p%360)+'°',false,'']];},
+    phases:[0,1,2,3].map(i=>({key:KEYS[i],name:['Admissão','Compressão','Combustão e expansão','Escape'][i],start:i*270,end:(i+1)*270,
+      simple:['O espaço entre o rotor e a carcaça cresce e enche-se.','O rotor aperta esse espaço e a mistura é comprimida.','Faísca e empurrão: a pressão empurra o rotor.','É como expirar: o rotor empurra os gases queimados para fora.'][i],
+      what:['A face A do rotor passa pela janela de admissão e o espaço entre ela e a carcaça aumenta, aspirando a mistura. Não há válvulas: é o próprio rotor que abre e fecha a janela.',
+        'O rotor continua a rodar e o espaço entre a face A e a carcaça diminui à medida que se aproxima da zona mais estreita. A mistura é comprimida (neste modelo, cerca de 10:1).',
+        'A vela inflama a mistura no ponto de maior compressão. Os gases empurram a face do rotor, que gira e, pela engrenagem e pelo excêntrico, faz rodar o veio de saída. O veio dá 3 voltas por cada volta do rotor.',
+        'O espaço volta a diminuir e a face A empurra os gases queimados para fora pela janela de escape. A seguir, essa face volta à janela de admissão.'][i],
+      why:['Com menos peças móveis (sem válvulas, sem cames, sem bielas) o motor é mais simples e suave.',
+        'Repara que as faces B e C estão noutras fases ao mesmo tempo: há sempre três câmaras a trabalhar.',
+        'Cada face faz 1 combustão por volta do rotor. Como há 3 faces e o veio dá 3 voltas, há 1 combustão por cada volta do veio.',
+        'A câmara é longa e fina, por isso a combustão é menos completa e o consumo tende a ser maior do que num motor de pistões.'][i]})),
+    parts:[['Rotor triangular','tem 3 faces; cada face funciona como um «pistão» e faz os 4 tempos.'],['Carcaça (epitrocoide)','a forma da cavidade onde o rotor gira; define as zonas largas e estreitas.'],['Veio excêntrico','o veio de saída; o rotor está montado na parte descentrada.'],['Vela','inflama a mistura no ponto de maior compressão.'],['Janela de admissão','abertura na carcaça por onde entra a mistura (aberta e tapada pelo rotor).'],['Janela de escape','abertura por onde saem os gases queimados.'],['Engrenagem fixa e coroa do rotor','a coroa do rotor engrena numa engrenagem fixa e obriga-o a rodar a 1/3 da velocidade do veio.'],['Vedantes dos vértices','pontas do rotor que vedam cada câmara contra a carcaça.']],
+    note:'<b>Na aviação</b><p>Os motores rotativos são compactos e suaves, e por isso aparecem em drones (UAV) e aeronaves experimentais. O desgaste dos vedantes dos vértices e o consumo têm limitado o uso na aviação certificada.</p>'
+  };
+})();
+
+/* ================= helpers para os novos simuladores ================= */
+function fitCv(canvas,LW,LH,wOverride){
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  const w=wOverride||(Math.max(0,canvas.parentElement.clientWidth-12)||LW);
+  const k=w/LW;canvas.style.height=(LH*k)+'px';canvas.width=Math.round(w*dpr);canvas.height=Math.round(LH*k*dpr);
+  return{k:k*dpr,w};
+}
+const cmul=(a,b)=>[a[0]*b[0]-a[1]*b[1],a[0]*b[1]+a[1]*b[0]];
+const cdiv=(a,b)=>{const d=b[0]*b[0]+b[1]*b[1]||1e-12;return[(a[0]*b[0]+a[1]*b[1])/d,(a[1]*b[0]-a[0]*b[1])/d];};
+const setTags=(el,tg)=>{const k=JSON.stringify(tg);if(el._k===k)return;el._k=k;el.innerHTML=tg.map(t=>`<li class="tag" data-on="${t[2]}" style="--c:var(--${t[3]||'muted'})"><span>${t[0]}</span><b>${t[1]}</b></li>`).join('');};
+
+/* ================= PERFIL ALAR ================= */
+class AeroSim{
+  constructor(){
+    this.cv=$('#aero-cv');this.ctx=this.cv.getContext('2d');this.gcv=$('#aero-gr');this.gctx=this.gcv.getContext('2d');
+    this.LW=760;this.LH=430;this.GH=170;
+    this.aoa=5;this.V=90;this.camber=true;this.forces=true;this.playing=!reduce;this.t=0;
+    this.eps=0.1;this.s=80;this.ox=330;this.oy=215;
+    this.P=[];const rows=[];for(let y=-2.5;y<=2.51;y+=0.34)rows.push(y);this.rows=rows;
+    let sd=5;const rnd=()=>{sd=(sd*16807)%2147483647;return sd/2147483647;};this.rnd=rnd;
+    for(let i=0;i<rows.length*30;i++){const y=rows[i%rows.length];this.P.push({x:-4.4+rnd()*9.6,y,tr:[],tb:false});}
+    this.W=11300;this.S=16.2;
+    this.bind();this.setGeom();this.resize();
+  }
+  bind(){
+    const q=s=>$(s);
+    const aoa=q('#aero-aoa'),v=q('#aero-v');
+    aoa.addEventListener('input',()=>{this.aoa=+aoa.value;this.setGeom();});
+    v.addEventListener('input',()=>{this.V=+v.value;});
+    q('#aero-camber').addEventListener('change',e=>{this.camber=e.target.checked;this.setGeom();});
+    q('#aero-forces').addEventListener('change',e=>{this.forces=e.target.checked;});
+    this.btn=q('#aero-play');this.btn.addEventListener('click',()=>{this.playing=!this.playing;this.btn.textContent=this.playing?'Pausa':'Reproduzir';});
+    this.btn.textContent=this.playing?'Pausa':'Reproduzir';
+    this.aoaO=q('#aero-aoa-o');this.vO=q('#aero-v-o');this.card=q('#aero-card');this.tags=q('#aero-tags');
+  }
+  setGeom(){
+    const delta=this.camber?0.05:0,eps=this.eps;
+    this.z0=[-eps,delta];this.a=Math.hypot(1+eps,delta);this.a2=this.a*this.a;this.beta=Math.atan2(delta,1+eps);
+    this.alr=this.aoa*DEG;this.Gam=4*Math.PI*this.a*Math.sin(this.alr+this.beta);
+    this.as=this.camber?15:14;this.a0=this.camber?-2.5:0;
+    // Gama visual (reduz depois da perda)
+    const clm=this.cl(this.aoa),clp=Math.max(0.05,Math.abs(2*Math.PI*1.1*Math.sin(this.alr+this.beta)));
+    this.gs=this.aoa>this.as?clamp(Math.abs(clm)/clp,0,1):1;
+    // contorno do perfil no referencial do perfil
+    const pts=[];for(let i=0;i<=120;i++){const th=i/120*TAU,zr=this.z0[0]+this.a*Math.cos(th),zi=this.z0[1]+this.a*Math.sin(th);const d=zr*zr+zi*zi;pts.push([zr+zr/d,zi-zi/d]);}
+    this.out=pts;
+  }
+  cl(a){const m=0.095,as=this.as,a0=this.a0;let c=m*(a-a0);if(a>as){const f=clamp((a-as)/5,0,1);c=m*(as-a0)*(1-0.4*f*f*(3-2*f));}return c;}
+  cd(a){const c=this.cl(a);let d=0.012+0.04*c*c;if(a>this.as)d+=0.035*Math.min(a-this.as,7);return d;}
+  vel(x,y){
+    const ca=Math.cos(this.alr),sa=Math.sin(this.alr),zr=x*ca-y*sa,zi=x*sa+y*ca;
+    const z2r=zr*zr-zi*zi-4,z2i=2*zr*zi,m=Math.hypot(z2r,z2i);
+    const sr=Math.sqrt((m+z2r)/2),si=(z2i<0?-1:1)*Math.sqrt(Math.max(0,(m-z2r)/2));
+    let xr=(zr+sr)/2,xi=(zi+si)/2;const yr=(zr-sr)/2,yi=(zi-si)/2;
+    if(yr*yr+yi*yi>xr*xr+xi*xi){xr=yr;xi=yi;}
+    const d=[xr-this.z0[0],xi-this.z0[1]];if(d[0]*d[0]+d[1]*d[1]<this.a2*1.0006)return null;
+    const d2=cmul(d,d),e1=[Math.cos(-this.alr),Math.sin(-this.alr)],e2=[Math.cos(this.alr),Math.sin(this.alr)];
+    const t2=cdiv(cmul(e2,[this.a2,0]),d2),t3=cdiv([0,this.Gam*this.gs/(2*Math.PI)],d);
+    const dW=[e1[0]-t2[0]+t3[0],e1[1]-t2[1]+t3[1]];
+    const x2=cmul([xr,xi],[xr,xi]),inv=cdiv([1,0],x2),dz=[1-inv[0],-inv[1]];
+    if(Math.hypot(dz[0],dz[1])<2e-3)return[0.4*Math.cos(this.alr),0.4*Math.sin(this.alr)];
+    const w=cdiv(dW,dz),vz=[w[0],-w[1]],vw=cmul(vz,[Math.cos(-this.alr),Math.sin(-this.alr)]);
+    const sp=Math.hypot(vw[0],vw[1]);if(sp>3.2){vw[0]*=3.2/sp;vw[1]*=3.2/sp;}
+    return[vw[0],vw[1],zr,zi];
+  }
+  resize(){const r=fitCv(this.cv,this.LW,this.LH);this.k=r.k;const g=fitCv(this.gcv,this.LW,this.GH,r.w);this.gk=g.k;this.render();}
+  frame(dt){if(this.playing){this.t+=dt;this.step(dt);}this.render();}
+  step(dt){
+    const upx=(60+this.V*1.2)/this.s,as=this.as,st=this.aoa>as?clamp((this.aoa-as)/3,0,1):0;
+    this.P.forEach(p=>{
+      const v=this.vel(p.x,p.y);
+      if(!v||p.x>5.3||Math.abs(p.y)>2.9){p.x=-4.4;p.y=this.rows[Math.floor(this.rnd()*this.rows.length)]+(this.rnd()-0.5)*0.1;p.tr=[];p.tb=false;return;}
+      let vx=v[0],vy=v[1];p.tb=false;
+      if(st>0&&v[2]>-1.3&&v[3]>0.05&&v[3]<1.5+(v[2]+1.3)*0.4){p.tb=true;vx*=(1-0.72*st);vy+=(this.rnd()-0.5)*1.4*st;}
+      p.tr.push([p.x,p.y]);if(p.tr.length>13)p.tr.shift();
+      p.x+=vx*upx*dt;p.y+=vy*upx*dt;
+    });
+  }
+  M(x,y){return[this.ox+x*this.s,this.oy-y*this.s];}
+  W2(zr,zi){const c=Math.cos(this.alr),s=Math.sin(this.alr);return[zr*c+zi*s,-zr*s+zi*c];}
+  render(){
+    if(!this.k)return;const ctx=this.ctx,al=this.alr;
+    ctx.setTransform(this.k,0,0,this.k,0,0);ctx.clearRect(0,0,this.LW,this.LH);
+    const cl=this.cl(this.aoa),cd=this.cd(this.aoa),stalled=this.aoa>this.as;
+    const vms=this.V*0.514444,q=0.5*1.225*vms*vms,L=q*this.S*cl,D=q*this.S*cd;
+    /* halos de pressão */
+    const k1=clamp(Math.abs(cl)/1.7,0,1)*0.42*(stalled?0.55:1);
+    const up=cl>=0?C.in:C.pow,dn=cl>=0?C.pow:C.in;
+    const h1=this.M(0.3,1.0),h2=this.M(0,-1.0);
+    let g=ctx.createRadialGradient(h1[0],h1[1],5,h1[0],h1[1],190);g.addColorStop(0,rgba(up,k1));g.addColorStop(1,rgba(up,0));ctx.fillStyle=g;ctx.fillRect(0,0,this.LW,this.oy);
+    g=ctx.createRadialGradient(h2[0],h2[1],5,h2[0],h2[1],170);g.addColorStop(0,rgba(dn,k1*0.8));g.addColorStop(1,rgba(dn,0));ctx.fillStyle=g;ctx.fillRect(0,this.oy,this.LW,this.LH-this.oy);
+    /* linhas de fluxo */
+    ctx.lineCap='round';ctx.lineWidth=2;
+    this.P.forEach(p=>{
+      const n=p.tr.length;if(n<2)return;
+      const v=this.vel(p.x,p.y),sp=v?Math.hypot(v[0],v[1]):1;
+      const col=p.tb?C.exh:(sp<1?mixHex(C.muted,C.pow,(1-sp)/0.3):mixHex(C.muted,C.in,(sp-1)/0.3));
+      for(let i=1;i<n;i++){const a=this.M(p.tr[i-1][0],p.tr[i-1][1]),b=this.M(p.tr[i][0],p.tr[i][1]);ctx.strokeStyle=rgba(col,0.15+0.65*i/n);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}
+    });
+    /* perfil */
+    ctx.lineJoin='round';ctx.beginPath();
+    let le=null,pts=this.out.map(p=>this.W2(p[0],p[1]));
+    pts.forEach((p,i)=>{const m=this.M(p[0],p[1]);if(i)ctx.lineTo(m[0],m[1]);else ctx.moveTo(m[0],m[1]);if(!le||p[0]<le[0])le=p;});
+    ctx.closePath();ctx.fillStyle=C.metal;ctx.fill();ctx.lineWidth=2.5;ctx.strokeStyle=C.outline;ctx.stroke();
+    const LEp=this.M(le[0],le[1]),TE=this.W2(2,0),TEp=this.M(TE[0],TE[1]);
+    /* corda e ângulo */
+    ctx.setLineDash([6,5]);ctx.lineWidth=1.5;ctx.strokeStyle=C.muted;ctx.beginPath();ctx.moveTo(LEp[0],LEp[1]);ctx.lineTo(TEp[0],TEp[1]);ctx.stroke();
+    ctx.strokeStyle=C.text;ctx.beginPath();ctx.moveTo(LEp[0]-70,LEp[1]);ctx.lineTo(TEp[0]+10,LEp[1]);ctx.stroke();ctx.setLineDash([]);
+    if(Math.abs(this.aoa)>0.4){ctx.strokeStyle=C.pow;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(LEp[0],LEp[1],62,0,this.aoa>0?al:al,this.aoa<0);ctx.stroke();}
+    halo(ctx,'α = '+fmt(this.aoa,1)+'°',LEp[0]-10,LEp[1]-16,14,'right',C.pow);
+    halo(ctx,'Bordo de ataque',LEp[0]-10,LEp[1]+20,12,'right',C.text);
+    halo(ctx,'Bordo de fuga',TEp[0]+8,TEp[1]+(this.aoa>8?26:-24),12,'left',C.text);
+    halo(ctx,'Corda',LEp[0]+(TEp[0]-LEp[0])*0.8,LEp[1]+(TEp[1]-LEp[1])*0.8-22,11,'center',C.muted);
+    halo(ctx,'Vento relativo →',24,26,13,'left',C.text);
+    /* legenda de pressão */
+    if(Math.abs(cl)>0.15){halo(ctx,cl>0?'Pressão baixa (ar rápido)':'Pressão alta',this.ox-60,this.oy-165,13,'center',up);halo(ctx,cl>0?'Pressão alta (ar lento)':'Pressão baixa',this.ox-60,this.oy+165,13,'center',dn);}
+    if(stalled)halo(ctx,'Escoamento descolado (perda)',TEp[0]-20,TEp[1]-(this.aoa>0?95:0),13,'center',C.pow);
+    /* forças */
+    if(this.forces){
+      const qp=this.M(-0.9,0.0);
+      const arrow=(x,y,dx,dy,col,lab,lx,ly)=>{ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+dx,y+dy);ctx.stroke();const an=Math.atan2(dy,dx);ctx.beginPath();ctx.moveTo(x+dx,y+dy);ctx.lineTo(x+dx-12*Math.cos(an-0.45),y+dy-12*Math.sin(an-0.45));ctx.lineTo(x+dx-12*Math.cos(an+0.45),y+dy-12*Math.sin(an+0.45));ctx.closePath();ctx.fill();halo(ctx,lab,x+dx+lx,y+dy+ly,13,'left',col);};
+      const kL=6,ll=clamp(L/1000*kL,-190,190),dl=clamp(D/1000*kL*3,0,70);
+      const px=qp[0]+10,py=this.oy+10;
+      if(Math.abs(ll)>3)arrow(px,py,0,-ll,C.in,'Sustentação',8,-6);
+      arrow(px,py,dl+8,0,C.comp,'Resistência',8,16);
+      arrow(px+60,py,0,this.W/1000*kL,C.muted,'Peso (exemplo)',8,0);
+    }
+    this.renderGraph(cl,L);
+    this.updateUI(cl,cd,L,D);
+  }
+  renderGraph(cl,L){
+    const g=this.gctx;g.setTransform(this.gk,0,0,this.gk,0,0);g.clearRect(0,0,this.LW,this.GH);
+    const l0=44,r0=14,t0=14,b0=30,W=this.LW-l0-r0,H=this.GH-t0-b0,amin=-5,amax=22,cmin=-0.6,cmax=2.0;
+    const X=a=>l0+(a-amin)/(amax-amin)*W,Y=c=>t0+H*(1-(c-cmin)/(cmax-cmin));
+    g.fillStyle=rgba(C.pow,0.12);g.fillRect(X(this.as),t0,X(amax)-X(this.as),H);
+    g.font=`700 12px ${FONT}`;g.textBaseline='middle';g.fillStyle=C.pow;g.textAlign='left';g.fillText('perda',X(this.as)+6,t0+10);
+    g.strokeStyle=C.line;g.lineWidth=1;g.beginPath();g.moveTo(l0,t0);g.lineTo(l0,t0+H);g.lineTo(l0+W,t0+H);g.moveTo(l0,Y(0));g.lineTo(l0+W,Y(0));g.stroke();
+    g.fillStyle=C.muted;g.textAlign='center';[-5,0,5,10,15,20].forEach(a=>g.fillText(a+'°',X(a),this.GH-12));
+    g.textAlign='right';[0,1,2].forEach(c=>g.fillText(String(c),l0-6,Y(c)));
+    const clreq=this.W/(0.5*1.225*Math.pow(this.V*0.514444,2)*this.S);
+    if(clreq<cmax){g.setLineDash([6,4]);g.strokeStyle=C.comp;g.lineWidth=2;g.beginPath();g.moveTo(l0,Y(clreq));g.lineTo(l0+W,Y(clreq));g.stroke();g.setLineDash([]);g.fillStyle=C.comp;g.textAlign='right';g.fillText('Cl necessário para sustentar o avião',l0+W-4,Y(clreq)-9);}
+    else{g.fillStyle=C.comp;g.textAlign='right';g.fillText('A esta velocidade nem o Cl máximo chega',l0+W-4,t0+10);}
+    g.strokeStyle=C.in;g.lineWidth=3;g.lineJoin='round';g.beginPath();
+    for(let a=amin;a<=amax;a+=0.5){const x=X(a),y=Y(this.cl(a));if(a===amin)g.moveTo(x,y);else g.lineTo(x,y);}g.stroke();
+    g.fillStyle=C.text;g.beginPath();g.arc(X(this.aoa),Y(cl),6,0,TAU);g.fill();g.strokeStyle=C.panel;g.lineWidth=2;g.stroke();
+  }
+  updateUI(cl,cd,L,D){
+    this.aoaO.textContent=fmt(this.aoa,1)+'°';this.vO.textContent=this.V+' kt';
+    const stalled=this.aoa>this.as,near=!stalled&&this.aoa>this.as-2.5,W=this.W,ok=L>=W;
+    const state=stalled?'stall':near?'near':cl<0.1?'low':'ok';
+    const key=state+(ok?'1':'0')+(this.camber?'c':'s');
+    if(key!==this.ck){this.ck=key;
+      const T={stall:['Perda de sustentação (stall)','O ângulo de ataque passou o ângulo crítico. O ar já não consegue seguir a superfície de cima: descola e fica turbulento. A sustentação cai e a resistência sobe.','Para recuperar: baixar o nariz para reduzir o ângulo de ataque. A perda depende do ângulo, não da velocidade: pode acontecer a qualquer velocidade e em qualquer atitude.'],
+        near:['Perto do ângulo crítico','A sustentação está quase no máximo. Mais um pouco de ângulo e o escoamento descola.','É a zona de aviso: o avião avisa com vibração (buffet) e a buzina de perda.'],
+        low:['Sustentação quase nula','Com este ângulo quase não há diferença de pressão entre cima e baixo. Num perfil simétrico, com α = 0° a sustentação é zero.','Num perfil curvo (assimétrico) ainda há sustentação com α = 0°.'],
+        ok:['Escoamento colado ao perfil','O ar acelera por cima e fica mais lento por baixo. A pressão em cima fica mais baixa do que em baixo, e o perfil também desvia o ar para baixo. O resultado é a sustentação, perpendicular ao vento relativo.','Aumenta o ângulo de ataque ou a velocidade e a sustentação sobe.']}[state];
+      this.card.innerHTML=`<h2><span class="dot" style="background:var(--${stalled?'pow':near?'comp':'in'})"></span>${T[0]}</h2><p class="simple">${T[1]}</p><dl><dt>Em voo</dt><dd>${T[2]}</dd></dl>`;
+    }
+    setTags(this.tags,[['Cl',fmt(cl,2),false,''],['Sustentação',fmt(L/1000,1)+' kN',ok,ok?'in':'pow'],['Voo nivelado',ok?'sustenta o avião':'não sustenta',ok,ok?'in':'pow'],['Escoamento',stalled?'descolado':'colado',stalled,'pow']]);
+  }
+}
+
+/* ================= TUBO DE PITOT E SISTEMA ESTÁTICO ================= */
+class PitotSim{
+  constructor(){
+    this.cv=$('#pt-cv');this.ctx=this.cv.getContext('2d');this.LW=760;this.LH=560;
+    this.ias=90;this.alt=3000;this.mode=0;this.sblock=false;this.heat=false;this.climb=0;this.t=0;this.playing=!reduce;
+    this.frozenS=null;this.trapped=null;this.vsi=0;
+    let sd=9;const rnd=()=>{sd=(sd*16807)%2147483647;return sd/2147483647;};this.rnd=rnd;
+    this.P=[];for(let i=0;i<110;i++)this.P.push({x:rnd()*520,y0:30+rnd()*185,sp:0.7+rnd()*0.6});
+    this.bind();this.resize();
+  }
+  ps(h){return 101325*Math.pow(1-2.25577e-5*h*0.3048,5.25588);}
+  palt(p){return(1-Math.pow(p/101325,1/5.25588))/2.25577e-5/0.3048;}
+  bind(){
+    const q=s=>$(s);const sp=q('#pt-ias'),al=q('#pt-alt');this.spO=q('#pt-ias-o');this.alO=q('#pt-alt-o');this.sp=sp;this.al=al;
+    sp.addEventListener('input',()=>{this.ias=+sp.value;});
+    al.addEventListener('input',()=>{this.alt=+al.value;this.climb=0;this.markClimb();});
+    $$('input[name=pt-mode]').forEach(r=>r.addEventListener('change',()=>{this.setMode(+r.value);}));
+    q('#pt-static').addEventListener('change',e=>{this.sblock=e.target.checked;this.frozenS=this.sblock?this.ps(this.alt):null;});
+    q('#pt-heat').addEventListener('change',e=>{this.heat=e.target.checked;});
+    $$('[data-climb]').forEach(b=>b.addEventListener('click',()=>{this.climb=+b.dataset.climb;this.markClimb();}));
+    this.card=q('#pt-card');this.tags=q('#pt-tags');this.markClimb();
+  }
+  markClimb(){$$('[data-climb]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.climb===this.climb)));}
+  setMode(m){
+    this.mode=m;
+    if(m===2){const q=0.5*1.225*Math.pow(this.ias*0.514444,2);this.trapped=this.ps(this.alt)+q;}else this.trapped=null;
+  }
+  resize(){const r=fitCv(this.cv,this.LW,this.LH);this.k=r.k;this.render();}
+  eff(){return this.heat?0:this.mode;}
+  calc(){
+    const q=0.5*1.225*Math.pow(this.ias*0.514444,2),psA=this.ps(this.alt),pt=psA+q,mode=this.eff();
+    const psRef=this.sblock&&this.frozenS!==null?this.frozenS:psA;
+    let pin=pt;if(mode===1)pin=psA;if(mode===2)pin=this.trapped!==null?this.trapped:pt;
+    const qi=Math.max(0,pin-psRef),iasI=Math.sqrt(2*qi/1.225)/0.514444;
+    return{q,psA,pt,psRef,pin,iasI,altI:this.palt(psRef),vsiI:this.sblock?0:this.vsi,mode};
+  }
+  frame(dt){
+    if(this.playing){this.t+=dt;
+      if(this.climb){this.alt=clamp(this.alt+this.climb*1000/60*10*dt,0,15000);this.vsi=this.climb*1000;this.al.value=String(Math.round(this.alt));if(this.alt<=0||this.alt>=15000){this.climb=0;this.vsi=0;this.markClimb();}}
+      else this.vsi=0;
+      const v=(40+this.ias*1.5)*dt;
+      this.P.forEach(p=>{p.x+=v*p.sp;if(p.x>520){p.x=-10;p.y0=30+this.rnd()*185;}});
+    }
+    this.render();
+  }
+  render(){
+    if(!this.k)return;const ctx=this.ctx,S=this.calc();
+    ctx.setTransform(this.k,0,0,this.k,0,0);ctx.clearRect(0,0,this.LW,this.LH);
+    this.drawProbe(ctx,S);this.drawLines(ctx,S);
+    this.dialASI(ctx,170,415,100,S.iasI);this.dialALT(ctx,420,415,100,S.altI);this.dialVSI(ctx,650,415,90,S.vsiI);
+    halo(ctx,'Velocímetro',170,530,14,'center',C.text);halo(ctx,'Altímetro',420,530,14,'center',C.text);halo(ctx,'Variómetro',650,530,14,'center',C.text);
+    ctx.font=`700 13px ${FONT}`;ctx.textAlign='left';ctx.textBaseline='middle';
+    const rows=[['Total (Pt)',fmt(S.pt/100,1)+' hPa',C.pow],['Estática (Ps)',fmt(S.psA/100,1)+' hPa',C.in],['Dinâmica (Pt−Ps)',fmt(S.q/100,1)+' hPa',C.text]];
+    rows.forEach((r,i)=>{halo(ctx,r[0],548,34+i*22,13,'left',r[2]);halo(ctx,r[1],748,34+i*22,13,'right',r[2]);});
+    this.updateUI(S);
+  }
+  drawProbe(ctx,S){
+    const mode=S.mode,cy=120;
+    /* fluxo de ar */
+    ctx.fillStyle=rgba(C.muted,0.7);
+    this.P.forEach(p=>{
+      let x=p.x,d0=p.y0-cy,y=p.y0,a=0.8;
+      if(Math.abs(d0)<8&&mode===0&&x>=130){const f=clamp((x-130)/150,0,1);y=cy+d0*(1-0.5*f);a=0.9*(1-f);if(x>285)return;}
+      else if(x>90&&x<460){const s=d0<0?-1:1,tg=cy+s*Math.max(Math.abs(d0),27);const b=clamp((x-90)/50,0,1)*(1-clamp((x-420)/50,0,1));y=p.y0+(tg-p.y0)*b;}
+      ctx.globalAlpha=a;ctx.beginPath();ctx.arc(x,y,2.3,0,TAU);ctx.fill();
+    });ctx.globalAlpha=1;
+    halo(ctx,'Vento relativo →',24,26,13,'left',C.text);
+    /* suporte */
+    ctx.lineWidth=2;ctx.strokeStyle=C.outline;ctx.fillStyle=C.block;box(ctx,430,16,90,208,0);halo(ctx,'Fuselagem/asa',475,40,11,'center',C.panel);
+    /* tubo */
+    ctx.fillStyle=C.metal;box(ctx,128,98,302,44,10);
+    ctx.fillStyle=C.hollow;ctx.lineWidth=1.5;box(ctx,136,106,160,28,0);box(ctx,304,106,120,28,0);
+    ctx.fillStyle=C.metal2;ctx.fillRect(296,100,8,40);
+    ctx.fillStyle=rgba(C.pow,0.12+0.35*clamp(S.q/2500,0,1));if(mode===0)ctx.fillRect(136,106,160,28);
+    ctx.fillStyle=rgba(C.in,0.25);ctx.fillRect(304,106,120,28);
+    /* aquecimento */
+    if(this.heat){ctx.strokeStyle=C.pow;ctx.lineWidth=2;ctx.beginPath();for(let x=140;x<=290;x+=10){ctx.lineTo(x,x%20===0?100:104);}ctx.stroke();halo(ctx,'Aquecimento ligado',210,74,12,'center',C.pow);}
+    /* gelo/tampas */
+    const ice=(x,y,r)=>{ctx.fillStyle=mixHex(C.in,'#ffffff',0.75);ctx.strokeStyle=C.in;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();ctx.stroke();};
+    if(mode>=1){ice(128,120,13);ice(133,110,8);ice(133,131,8);}
+    /* dreno */
+    ctx.strokeStyle=C.outline;ctx.lineWidth=2;ctx.fillStyle=C.hollow;box(ctx,166,138,8,8,0);
+    if(mode===2){ice(170,148,7);}
+    /* tomadas estáticas */
+    ctx.fillStyle=C.hollow;box(ctx,346,96,12,6,0);box(ctx,346,138,12,6,0);
+    if(this.sblock){ice(352,93,7);ice(352,148,7);}
+    /* etiquetas */
+    halo(ctx,'Tomada de pressão total',24,194,12,'left',C.pow);
+    halo(ctx,'Dreno',170,162,12,'center',C.muted);
+    halo(ctx,'Tomadas estáticas',352,76,12,'center',C.in);
+  }
+  drawLines(ctx,S){
+    const line=(pts,col)=>{ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.lineWidth=9;ctx.strokeStyle=C.outline;ctx.stroke();ctx.lineWidth=5;ctx.strokeStyle=col;ctx.stroke();};
+    line([[190,142],[190,176],[130,176],[130,323]],C.pow);
+    line([[360,142],[360,235],[210,235],[210,323]],C.in);
+    line([[420,235],[420,315]],C.in);line([[360,235],[650,235],[650,326]],C.in);
+  }
+  dialFace(ctx,x,y,r){ctx.fillStyle='#10161b';ctx.strokeStyle=C.outline;ctx.lineWidth=4;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();ctx.stroke();}
+  hand(ctx,x,y,ang,len,w,col,tail){ctx.save();ctx.translate(x,y);ctx.rotate(ang*DEG);ctx.strokeStyle=col;ctx.lineWidth=w;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-(tail||10),0);ctx.lineTo(len,0);ctx.stroke();ctx.restore();ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,5,0,TAU);ctx.fill();}
+  dialASI(ctx,x,y,r,kt){
+    this.dialFace(ctx,x,y,r);const A=v=>135+270*v/180;
+    const arc=(a,b,rr,col,w)=>{ctx.strokeStyle=col;ctx.lineWidth=w;ctx.beginPath();ctx.arc(x,y,rr,A(a)*DEG,A(b)*DEG);ctx.stroke();};
+    arc(33,85,r-14,'#f4f4f4',4);arc(48,129,r-20,'#37c46d',6);arc(129,163,r-20,'#ffd23f',6);
+    const ra=A(163)*DEG;ctx.strokeStyle='#ff4d3a';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x+(r-30)*Math.cos(ra),y+(r-30)*Math.sin(ra));ctx.lineTo(x+(r-8)*Math.cos(ra),y+(r-8)*Math.sin(ra));ctx.stroke();
+    ctx.fillStyle='#e8eef1';ctx.strokeStyle='#e8eef1';ctx.font=`700 11px ${FONT}`;ctx.textAlign='center';ctx.textBaseline='middle';
+    for(let v=0;v<=180;v+=10){const a=A(v)*DEG,l=v%20===0?9:5;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x+(r-6)*Math.cos(a),y+(r-6)*Math.sin(a));ctx.lineTo(x+(r-6-l)*Math.cos(a),y+(r-6-l)*Math.sin(a));ctx.stroke();if(v%20===0&&v>0)ctx.fillText(String(v),x+(r-36)*Math.cos(a),y+(r-36)*Math.sin(a));}
+    ctx.font=`700 10px ${FONT}`;ctx.fillText('NÓS',x,y+34);ctx.font=`700 13px ${FONT}`;ctx.fillText(String(Math.round(kt)),x,y+52);
+    this.hand(ctx,x,y,A(clamp(kt,0,185)),r-24,4,'#ffffff',12);
+  }
+  dialALT(ctx,x,y,r,ft){
+    this.dialFace(ctx,x,y,r);ctx.fillStyle='#e8eef1';ctx.strokeStyle='#e8eef1';ctx.font=`700 15px ${FONT}`;ctx.textAlign='center';ctx.textBaseline='middle';
+    for(let i=0;i<50;i++){const a=(-90+i*7.2)*DEG,l=i%5===0?10:5;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x+(r-6)*Math.cos(a),y+(r-6)*Math.sin(a));ctx.lineTo(x+(r-6-l)*Math.cos(a),y+(r-6-l)*Math.sin(a));ctx.stroke();if(i%5===0)ctx.fillText(String(i/5),x+(r-28)*Math.cos(a),y+(r-28)*Math.sin(a));}
+    ctx.font=`700 10px ${FONT}`;ctx.fillText('ft',x,y+30);ctx.font=`700 13px ${FONT}`;ctx.fillText(String(Math.round(ft)).replace(/\B(?=(\d{3})+(?!\d))/g,' '),x,y+50);
+    this.hand(ctx,x,y,-90+(mod(ft,10000)/10000)*360,r-52,7,'#ffffff',4);
+    this.hand(ctx,x,y,-90+(mod(ft,1000)/1000)*360,r-14,3,'#ffffff',12);
+  }
+  dialVSI(ctx,x,y,r,fpm){
+    this.dialFace(ctx,x,y,r);const A=v=>180+170*v/2000;
+    ctx.fillStyle='#e8eef1';ctx.strokeStyle='#e8eef1';ctx.font=`700 13px ${FONT}`;ctx.textAlign='center';ctx.textBaseline='middle';
+    for(let v=-2000;v<=2000;v+=500){const a=A(v)*DEG,l=v%1000===0?10:5;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x+(r-6)*Math.cos(a),y+(r-6)*Math.sin(a));ctx.lineTo(x+(r-6-l)*Math.cos(a),y+(r-6-l)*Math.sin(a));ctx.stroke();if(v%1000===0&&v!==0)ctx.fillText(String(Math.abs(v)/1000),x+(r-26)*Math.cos(a),y+(r-26)*Math.sin(a));}
+    ctx.fillText('0',x-r+22,y);ctx.font=`700 10px ${FONT}`;ctx.fillText('SOBE',x+8,y-28);ctx.fillText('DESCE',x+8,y+28);ctx.fillText('x1000 ft/min',x+4,y+46);
+    this.hand(ctx,x,y,A(clamp(fpm,-2000,2000)),r-16,4,'#ffffff',8);
+  }
+  updateUI(S){
+    this.spO.textContent=this.ias+' kt';this.alO.textContent=Math.round(this.alt)+' ft';
+    const m=S.mode,sb=this.sblock;
+    let key=m+'-'+sb+'-'+this.heat+'-'+(this.mode);
+    if(key!==this.ck){this.ck=key;
+      let h,t1,t2;
+      if(m===0&&!sb){h='Sistema normal';t1='A pressão total (Pt) entra pela frente do tubo e a pressão estática (Ps) entra pelas tomadas laterais. A diferença Pt − Ps é a pressão dinâmica, e é ela que mede a velocidade.';t2='Velocímetro: Pt − Ps. Altímetro: só Ps. Variómetro: como Ps varia com o tempo.';}
+      else if(sb){h='Tomadas estáticas bloqueadas';t1='A pressão estática fica presa. O altímetro congela, o variómetro marca zero, e o velocímetro lê a menos numa subida e a mais numa descida.';t2='Muitos aviões têm fonte estática alternativa. O procedimento está no manual de voo.';}
+      else if(m===1){h='Entrada do pitot bloqueada, dreno aberto';t1='A pressão que estava no tubo escapa pelo dreno. O velocímetro desce para perto de zero mesmo com o avião a voar depressa. O altímetro e o variómetro continuam corretos.';t2='Por isso se tira a capa do pitot na inspeção pré-voo, e por isso existe o aquecimento do pitot.';}
+      else{h='Entrada e dreno bloqueados';t1='A pressão fica presa no tubo. O velocímetro deixa de reagir à velocidade e passa a comportar-se como um altímetro: sobe se subires e desce se desceres.';t2='É o caso mais perigoso, porque o instrumento parece normal. Experimenta carregar em Subir.';}
+      this.card.innerHTML=`<h2><span class="dot" style="background:var(--${(m===0&&!sb)?'in':'pow'})"></span>${h}</h2><p class="simple">${t1}</p><dl><dt>Para reter</dt><dd>${t2}</dd></dl>`;
+    }
+    const ok=Math.abs(S.iasI-this.ias)<3;
+    setTags(this.tags,[['Velocidade real (IAS)',this.ias+' kt',false,''],['Velocímetro indica',Math.round(S.iasI)+' kt',!ok,ok?'in':'pow'],['Altímetro indica',Math.round(S.altI)+' ft',Math.abs(S.altI-this.alt)>40,Math.abs(S.altI-this.alt)>40?'pow':'in']]);
+  }
+}
+
+/* ================= CARBURADOR ================= */
+class CarbSim{
+  constructor(){
+    this.cv=$('#cb-cv');this.ctx=this.cv.getContext('2d');this.LW=760;this.LH=460;
+    this.thr=0.7;this.mix=0.55;this.icing=false;this.heat=false;this.ice=0;this.level=0.9;this.t=0;this.playing=!reduce;this.nums=true;
+    let sd=3;const rnd=()=>{sd=(sd*16807)%2147483647;return sd/2147483647;};this.rnd=rnd;
+    this.A=[];for(let i=0;i<120;i++)this.A.push({x:90+rnd()*610,r:(rnd()*1.8-0.9)});
+    this.F=[];this.bind();this.resize();
+  }
+  bind(){
+    const q=s=>$(s);const th=q('#cb-thr'),mx=q('#cb-mix');this.thO=q('#cb-thr-o');this.mxO=q('#cb-mix-o');
+    th.addEventListener('input',()=>{this.thr=th.value/100;});mx.addEventListener('input',()=>{this.mix=mx.value/100;});
+    q('#cb-ice').addEventListener('change',e=>{this.icing=e.target.checked;});
+    q('#cb-heat').addEventListener('change',e=>{this.heat=e.target.checked;});
+    q('#cb-nums').addEventListener('change',e=>{this.nums=e.target.checked;});
+    this.btn=q('#cb-play');this.btn.addEventListener('click',()=>{this.playing=!this.playing;this.btn.textContent=this.playing?'Pausa':'Reproduzir';});this.btn.textContent=this.playing?'Pausa':'Reproduzir';
+    this.card=q('#cb-card');this.tags=q('#cb-tags');
+  }
+  resize(){const r=fitCv(this.cv,this.LW,this.LH);this.k=r.k;this.render();}
+  hh(x){return 42-24*Math.exp(-Math.pow((x-330)/75,2));}
+  hEff(x){return this.hh(x)-this.ice*11*Math.exp(-Math.pow((x-330)/90,2))-this.ice*3;}
+  calc(){
+    const open=this.thr,Q=Math.max(0.07,Math.pow(open,0.85))*(1-0.65*this.ice);
+    let afr=17-7*this.mix-(this.heat?1.2:0)-1.5*this.ice;afr=clamp(afr,9,18);
+    const eff=Math.exp(-Math.pow((afr-12.5)/4,2)),pw=clamp(Q*eff*(this.heat?0.96:1),0,1);
+    return{Q,afr,pw};
+  }
+  frame(dt){
+    if(this.playing){
+      this.t+=dt;const S=this.calc();
+      if(this.icing&&!this.heat)this.ice=Math.min(1,this.ice+dt/16);
+      if(this.heat)this.ice=Math.max(0,this.ice-dt/4);
+      const open=clamp((0.97-this.level)*14,0,1);this.level=clamp(this.level+(0.16*open-0.045*S.Q*(0.5+this.mix))*dt,0.7,0.99);
+      const base=130;
+      this.A.forEach(a=>{const h=this.hEff(a.x);a.x+=base*S.Q*(42/h)*dt;if(a.x>705){a.x=88;a.r=this.rnd()*1.8-0.9;}});
+      const rate=26*S.Q*(17.5-S.afr+3)/10;this.fa=(this.fa||0)+rate*dt;
+      while(this.fa>1){this.fa-=1;this.F.push({x:330,r:0.85,tr:(this.rnd()-0.5)*1.5,v:0});}
+      this.F.forEach(f=>{const h=this.hEff(f.x);f.x+=base*S.Q*(42/h)*dt*(f.x<340?0.6:1);f.r+=(f.tr-f.r)*Math.min(1,dt*1.3);f.v+=dt;});
+      this.F=this.F.filter(f=>f.x<705);
+    }
+    this.render();
+  }
+  render(){
+    if(!this.k)return;const ctx=this.ctx,S=this.calc(),cy=150;
+    ctx.setTransform(this.k,0,0,this.k,0,0);ctx.clearRect(0,0,this.LW,this.LH);
+    ctx.lineJoin='round';ctx.lineWidth=2;ctx.strokeStyle=C.outline;ctx.fillStyle=C.block;
+    box(ctx,90,40,615,190,0);
+    /* passagem de ar */
+    const top=[],bot=[];for(let x=90;x<=705;x+=5){top.push([x,cy-this.hh(x)]);bot.push([x,cy+this.hh(x)]);}
+    ctx.fillStyle=C.hollow;ctx.beginPath();top.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));bot.slice().reverse().forEach(p=>ctx.lineTo(p[0],p[1]));ctx.closePath();ctx.fill();ctx.stroke();
+    /* pressão baixa e mistura */
+    const g=ctx.createRadialGradient(330,cy,4,330,cy,90);g.addColorStop(0,rgba(C.in,0.3*S.Q));g.addColorStop(1,rgba(C.in,0));ctx.fillStyle=g;ctx.fillRect(240,cy-45,180,90);
+    const g2=ctx.createLinearGradient(345,0,705,0);g2.addColorStop(0,rgba(C.comp,0));g2.addColorStop(0.3,rgba(C.comp,0.18*S.Q));g2.addColorStop(1,rgba(C.comp,0.18*S.Q));ctx.fillStyle=g2;ctx.fillRect(345,cy-43,360,86);
+    /* filtro */
+    ctx.fillStyle=C.metal2;ctx.strokeStyle=C.outline;box(ctx,58,cy-48,30,96,3);ctx.lineWidth=1;for(let y=cy-40;y<cy+44;y+=8){ctx.beginPath();ctx.moveTo(62,y);ctx.lineTo(84,y);ctx.stroke();}ctx.lineWidth=2;
+    /* tubo do bico e cuba */
+    const bowl={x:235,y:250,w:190,h:150},fy=bowl.y+bowl.h*(1-this.level*0.75-0.1);
+    ctx.fillStyle=C.block;box(ctx,bowl.x-10,bowl.y-8,bowl.w+20,bowl.h+18,6);
+    ctx.fillStyle=C.hollow;box(ctx,bowl.x,bowl.y,bowl.w,bowl.h,4);
+    ctx.fillStyle=rgba(C.comp,0.55);ctx.fillRect(bowl.x+1,fy,bowl.w-2,bowl.y+bowl.h-fy-1);
+    ctx.fillStyle=C.block;box(ctx,320,cy+this.hh(330),20,bowl.y+bowl.h-cy-this.hh(330)+6,0);
+    const nz=cy+this.hEff(330)+2;
+    ctx.fillStyle=C.hollow;ctx.lineWidth=1.5;box(ctx,325,nz,10,bowl.y+bowl.h-nz-6,0);
+    const nozFuel=clamp(0.25+0.75*S.Q,0,1);
+    const fz=nz+(1-nozFuel)*70;ctx.fillStyle=rgba(C.comp,0.75);ctx.fillRect(326,fz,8,bowl.y+bowl.h-6-fz);
+    /* agulha da mistura / jacto */
+    const nd=bowl.y+bowl.h-14-this.mix*14;
+    ctx.fillStyle=C.metal;ctx.strokeStyle=C.outline;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(330,nd);ctx.lineTo(325,bowl.y+bowl.h+30);ctx.lineTo(335,bowl.y+bowl.h+30);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle=C.metal2;box(ctx,300,bowl.y+bowl.h-6,60,6,0);
+    /* flutuador e válvula */
+    const flY=fy-9;ctx.fillStyle=C.metal;ctx.strokeStyle=C.outline;ctx.lineWidth=2;box(ctx,262,flY,50,18,8);
+    ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(262,flY+9);ctx.lineTo(244,bowl.y+22);ctx.stroke();
+    const open=clamp((0.97-this.level)*14,0,1);
+    ctx.fillStyle=C.block;box(ctx,150,bowl.y+10,80,24,0);ctx.fillStyle=C.hollow;box(ctx,150,bowl.y+16,80,12,0,true,false);
+    ctx.fillStyle=rgba(C.comp,0.7);ctx.fillRect(152,bowl.y+17,76,10);
+    ctx.fillStyle=C.metal2;ctx.beginPath();ctx.moveTo(236,bowl.y+22-4*(1-open)-2);ctx.lineTo(228,bowl.y+22-(1-open)*4);ctx.lineTo(236,bowl.y+22+4);ctx.closePath();ctx.fill();
+    if(open>0.08){for(let i=0;i<2;i++)chevron(ctx,170+((this.t*40+i*38)%60),bowl.y+22,0,5,C.comp,open);}
+    halo(ctx,'Combustível da bomba',100,bowl.y-6,12,'center',C.comp);
+    /* gelo */
+    if(this.ice>0.02){
+      ctx.fillStyle=mixHex(C.in,'#ffffff',0.78);ctx.strokeStyle=C.in;ctx.lineWidth=1.5;
+      for(let x=265;x<=395;x+=13){const ht=this.ice*(11+4*Math.sin(x));const e=Math.exp(-Math.pow((x-330)/70,2));ctx.beginPath();ctx.arc(x,cy-this.hh(x)+ht*e*0.7,ht*0.55*e+2,0,TAU);ctx.fill();ctx.stroke();ctx.beginPath();ctx.arc(x+4,cy+this.hh(x)-ht*e*0.7,ht*0.55*e+2,0,TAU);ctx.fill();ctx.stroke();}
+    }
+    /* borboleta */
+    const bx=520,bh=this.hh(bx)-2,ang=(1-this.thr)*88*DEG;
+    ctx.save();ctx.translate(bx,cy);ctx.rotate(ang);ctx.fillStyle=C.metal;ctx.strokeStyle=C.outline;ctx.lineWidth=2;ctx.beginPath();ctx.rect(-3,-bh,6,2*bh);ctx.fill();ctx.stroke();ctx.restore();
+    ctx.fillStyle=C.outline;ctx.beginPath();ctx.arc(bx,cy,4,0,TAU);ctx.fill();
+    if(this.ice>0.3){ctx.fillStyle=mixHex(C.in,'#ffffff',0.78);ctx.strokeStyle=C.in;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(bx,cy-bh+2,3+this.ice*5,0,TAU);ctx.fill();ctx.stroke();ctx.beginPath();ctx.arc(bx,cy+bh-2,3+this.ice*5,0,TAU);ctx.fill();ctx.stroke();}
+    /* partículas de ar */
+    this.A.forEach(a=>{const h=this.hEff(a.x),y=cy+a.r*h*0.9,sp=42/h;ctx.fillStyle=rgba(mixHex(C.in,C.pow,clamp((sp-1)/1.1,0,1)*0.55),0.9);ctx.beginPath();ctx.arc(a.x,y,2.2,0,TAU);ctx.fill();});
+    ctx.fillStyle=C.comp;this.F.forEach(f=>{const h=this.hEff(f.x),y=cy+f.r*h*0.9;ctx.beginPath();ctx.arc(f.x,y,2.6,0,TAU);ctx.fill();});
+    if(S.Q>0.15){const sp=42/this.hEff(330);halo(ctx,'ar rápido, pressão baixa',330,cy-56,12,'center',C.in);}
+    halo(ctx,'Ar',74,cy-60,13,'center',C.text);halo(ctx,'Mistura → motor',640,cy-60,13,'center',C.comp);
+    if(this.nums){marker(ctx,1,73,cy+66);marker(ctx,2,290,cy-70);marker(ctx,3,365,cy+78);marker(ctx,4,bowl.x+bowl.w-22,bowl.y+bowl.h-26);marker(ctx,5,285,flY-16);marker(ctx,6,bx+22,cy-bh-14);marker(ctx,7,350,bowl.y+bowl.h+26);if(this.ice>0.05)marker(ctx,8,300,cy-this.hh(300)-14);}
+    /* medidor de potência */
+    ctx.fillStyle=C.panel;ctx.strokeStyle=C.line;ctx.lineWidth=1.5;box(ctx,470,300,230,86,10);
+    halo(ctx,'Mistura ar:comb.',484,320,13,'left',C.text);halo(ctx,fmt(S.afr,1)+' : 1',690,320,14,'right',C.comp);
+    halo(ctx,'Potência relativa',484,352,13,'left',C.text);
+    ctx.fillStyle=C.line;box(ctx,484,364,202,12,6,true,false);ctx.fillStyle=S.pw<0.3?C.pow:C.in;box(ctx,484,364,Math.max(6,202*S.pw),12,6,true,false);
+    this.updateUI(S);
+  }
+  updateUI(S){
+    this.thO.textContent=Math.round(this.thr*100)+' %';this.mxO.textContent=S.afr>16?'pobre':S.afr<11.5?'muito rica':S.afr<13.5?'rica':'média';
+    const iceTxt=this.ice>0.6?'gelo grosso':this.ice>0.15?'a formar-se':'sem gelo';
+    const mixTxt=S.afr>15.5?'pobre':S.afr>=11.5&&S.afr<=14?'boa':S.afr<11.5?'muito rica':'ligeiramente pobre';
+    const key=iceTxt+'|'+this.heat+'|'+(this.icing?1:0);
+    if(key!==this.ck){this.ck=key;
+      let h,t1,t2;
+      if(this.ice>0.15){h='Gelo no carburador';t1='O ar acelera na garganta e a gasolina evapora, e as duas coisas arrefecem o ar. O vapor de água do ar congela e entope a passagem.';t2='Sintoma: o motor perde potência (RPM descem) e pode falhar. Resposta: ligar o aquecimento do carburador, que manda ar quente para o carburador e derrete o gelo.';}
+      else if(this.icing&&!this.heat){h='Condições propícias a gelo';t1='Com ar húmido e temperaturas moderadas, o carburador pode gelar mesmo que lá fora esteja acima de zero. Espera uns segundos e vê o gelo formar-se.';t2='Por isso, em descida com o motor a pouca potência, o aquecimento do carburador costuma ser ligado.';}
+      else{h='Como funciona';t1='O ar passa por um estrangulamento (venturi). Onde a passagem é mais estreita, o ar vai mais depressa e a pressão fica mais baixa. Essa pressão baixa aspira a gasolina pelo bico.';t2='A borboleta controla quanto ar entra (potência). A agulha da mistura controla quanta gasolina sai. A cuba tem um flutuador que mantém o nível constante.';}
+      this.card.innerHTML=`<h2><span class="dot" style="background:var(--${this.ice>0.15?'pow':'in'})"></span>${h}</h2><p class="simple">${t1}</p><dl><dt>Para reter</dt><dd>${t2}</dd></dl>`;
+    }
+    setTags(this.tags,[['Mistura',mixTxt,S.afr>=11.5&&S.afr<=14,'in'],['Gelo',iceTxt,this.ice>0.15,'pow'],['Aquecimento do carburador',this.heat?'ligado':'desligado',this.heat,'comp'],['Potência',Math.round(S.pw*100)+' %',false,'']]);
+  }
+}
+
+/* ================= PAQUÍMETRO ================= */
+function setupCaliper(){
+  const svg=$('#cal-svg'),zsvg=$('#cal-zoom'),slider=$('#cal-slider'),out=$('#cal-val'),readEl=$('#cal-read'),quizEl=$('#cal-quiz');
+  const st={n:20,steps:0,mode:'free',target:null,solved:false};
+  const MAXMM=45;
+  const S=(v,a)=>`style="${v}"`;
+  function view(kind){
+    if(kind==='main')return{x0:50,s:8,off:0,minMm:0,maxMm:104,endMm:108};
+    const vl=st.n*(1-1/st.n),s=st.n===20?38:17,p=st.steps/st.n,off=p-1.2;
+    return{x0:0,s,off,minMm:off,maxMm:off+900/s,endMm:off+900/s+2,zoom:true};
+  }
+  function build(kind){
+    const v=view(kind),n=st.n,res=1/n,p=st.steps/n,main=Math.floor(st.steps/n),idx=st.steps%n,s=v.s;
+    const X=mm=>v.x0+(mm-v.off)*s,vlen=n*(1-res);
+    const hl=st.mode==='free'||st.solved;
+    let o='';
+    o+=`<rect x="${X(-6)}" y="60" width="${X(v.endMm)-X(-6)}" height="80" rx="3" style="fill:var(--metal);stroke:var(--outline);stroke-width:2"/>`;
+    const labelEvery=s>=30?1:5;
+    for(let mm=Math.ceil(v.minMm);mm<=Math.floor(v.maxMm);mm++){
+      const x=X(mm),len=mm%10===0?26:mm%5===0?19:12,isMain=hl&&mm===main;
+      o+=`<line x1="${x}" y1="140" x2="${x}" y2="${140-len}" style="stroke:${isMain?'var(--in)':'var(--outline)'};stroke-width:${isMain?4:(mm%10===0?2:1.3)}"/>`;
+      if(mm%labelEvery===0&&mm>=0)o+=`<text x="${x}" y="${140-len-7}" text-anchor="middle" style="fill:${isMain?'var(--in)':'var(--text)'};font:700 ${s>=30?15:13}px var(--f-body)">${mm}</text>`;
+    }
+    if(p>0.3&&!v.zoom)o+=`<rect x="${X(0)}" y="175" width="${X(p)-X(0)}" height="100" style="fill:var(--metal-2);stroke:var(--outline);stroke-width:2"/><text x="${(X(0)+X(p))/2}" y="228" text-anchor="middle" style="fill:var(--text);font:700 15px var(--f-body)">peça: ${fmt(p)} mm</text>`;
+    o+=`<rect x="${X(-6)}" y="60" width="${6*s}" height="240" style="fill:var(--metal);stroke:var(--outline);stroke-width:2"/>`;
+    o+=`<g class="hit" style="cursor:ew-resize"><rect x="${X(p)}" y="140" width="${X(p+vlen+10)-X(p)}" height="74" style="fill:var(--metal-2);stroke:var(--outline);stroke-width:2"/><rect x="${X(p)}" y="214" width="${6*s}" height="86" style="fill:var(--metal);stroke:var(--outline);stroke-width:2"/><rect x="${X(p)}" y="140" width="${X(p+vlen+10)-X(p)}" height="160" style="fill:transparent"/></g>`;
+    const per=n/10;
+    for(let i=0;i<=n;i++){
+      const x=X(p+i*(1-res)),long=i%per===0,isC=hl&&i===idx;
+      o+=`<line x1="${x}" y1="140" x2="${x}" y2="${140+(long?20:12)}" style="stroke:${isC?'var(--pow)':'var(--outline)'};stroke-width:${isC?3.5:1.3}"/>`;
+      if(long)o+=`<text x="${x}" y="${140+35}" text-anchor="middle" style="fill:${isC?'var(--pow)':'var(--text)'};font:700 ${s>=30?15:12}px var(--f-body)">${i/per}</text>`;
+    }
+    if(hl){const x=X(main+idx);o+=`<line x1="${x}" y1="${v.zoom?96:112}" x2="${x}" y2="${140+24}" style="stroke:var(--pow);stroke-width:2;stroke-dasharray:4 3"/>`;
+      o+=`<polygon points="${X(main)-7},52 ${X(main)+7},52 ${X(main)},64" style="fill:var(--in)"/>`;}
+    return o;
+  }
+  function fmtN(steps){return fmt(steps/st.n);}
+  function readCard(){
+    const n=st.n,res=1/n,main=Math.floor(st.steps/n),idx=st.steps%n,val=st.steps/n;
+    const rs=fmt(res,2);
+    if(st.mode==='quiz'&&!st.solved){readEl.innerHTML=`<h2>Lê o paquímetro</h2><p class="simple">Descobre a medida desta peça.</p><p>Olha para a escala fixa e para o nónio, tal como mostram os passos que vês no modo Explorar. Depois escreve a tua leitura em milímetros e carrega em Verificar.</p>`;return;}
+    readEl.innerHTML=`<h2>Leitura: <span style="font-variant-numeric:tabular-nums">${fmt(val)} mm</span></h2>
+    <ol class="steps">
+      <li><b>Escala fixa.</b> O zero do nónio passou o traço dos <span class="c-in">${main} mm</span> e ainda não chegou ao seguinte. Os mm inteiros são ${main}.</li>
+      <li><b>Nónio.</b> ${idx===0?`O traço <span class="c-pow">0</span> do nónio coincide com um traço da escala. Não há fração: 0 × ${rs} = 0.`:`O traço <span class="c-pow">${idx}</span> do nónio é o que coincide com um traço da escala. Cada traço vale ${rs} mm (1 ÷ ${n}).`} ${idx===0?'':`Frações: ${idx} × ${rs} = <span class="c-pow">${fmt(idx*res)} mm</span>.`}</li>
+      <li><b>Soma.</b> ${main} + ${fmt(idx*res)} = <b>${fmt(val)} mm</b>.</li>
+    </ol>`;
+  }
+  function render(){
+    svg.innerHTML=build('main');zsvg.innerHTML=build('zoom');
+    const mx=Math.floor(MAXMM*st.n);slider.max=String(mx);slider.value=String(st.steps);slider.disabled=st.mode==='quiz';
+    out.textContent=(st.mode==='quiz'&&!st.solved)?'?':fmt(st.steps/st.n)+' mm';
+    readCard();
+  }
+  function setSteps(v){st.steps=clamp(Math.round(v),0,Math.floor(MAXMM*st.n));render();}
+  slider.addEventListener('input',()=>setSteps(+slider.value));
+  $$('[data-cs]').forEach(b=>b.addEventListener('click',()=>{if(st.mode==='quiz')return;setSteps(st.steps+(+b.dataset.cs)*(b.dataset.cs==='20'||b.dataset.cs==='-20'?st.n/20:1));}));
+  $$('input[name=cal-res]').forEach(r=>r.addEventListener('change',()=>{const mm=st.steps/st.n;st.n=+r.value;if(st.mode==='quiz')newTask();else setSteps(mm*st.n);}));
+  $$('input[name=cal-mode]').forEach(r=>r.addEventListener('change',()=>{st.mode=r.value;quizEl.hidden=st.mode!=='quiz';if(st.mode==='quiz')newTask();else{render();}}));
+  /* arrastar */
+  let drag=null;
+  svg.addEventListener('pointerdown',e=>{if(st.mode==='quiz')return;if(!e.target.closest('.hit'))return;const r=svg.getBoundingClientRect(),v=view('main');const mm=((e.clientX-r.left)*900/r.width-v.x0)/v.s;drag=mm-st.steps/st.n;svg.setPointerCapture(e.pointerId);e.preventDefault();});
+  svg.addEventListener('pointermove',e=>{if(drag===null)return;const r=svg.getBoundingClientRect(),v=view('main');const mm=((e.clientX-r.left)*900/r.width-v.x0)/v.s-drag;setSteps(mm*st.n);});
+  const end=()=>{drag=null;};svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',end);
+  /* exercício */
+  function newTask(){
+    st.solved=false;st.target=5*st.n+Math.floor(Math.random()*(39*st.n));st.steps=st.target;
+    quizEl.innerHTML=`<h2>Exercício</h2><p>Qual é a medida da peça, em mm?</p><div class="row"><input id="cal-ans" type="text" inputmode="decimal" autocomplete="off" aria-label="A tua leitura em milímetros" placeholder="ex.: 23,35"><button class="btn primary" id="cal-chk" type="button">Verificar</button><button class="btn" id="cal-new" type="button">Nova peça</button></div><p class="fb" id="cal-fb" aria-live="polite"></p>`;
+    $('#cal-chk').onclick=check;$('#cal-new').onclick=newTask;$('#cal-ans').addEventListener('keydown',e=>{if(e.key==='Enter')check();});
+    render();
+  }
+  function check(){
+    const v=parseFloat(($('#cal-ans').value||'').replace(',','.')),fb=$('#cal-fb'),t=st.target/st.n;
+    if(isNaN(v)){fb.className='fb';fb.textContent='Escreve um número, por exemplo 23,35.';return;}
+    st.solved=true;
+    if(Math.abs(v-t)<0.5/st.n/2+1e-9){fb.className='fb ok';fb.textContent='Certo! '+fmt(t)+' mm.';}
+    else{fb.className='fb no';fb.textContent='Ainda não: a medida é '+fmt(t)+' mm. Vê os passos ao lado.';}
+    render();
+  }
+  render();
+}
+
+/* ================= MICRÓMETRO ================= */
+function setupMicrometer(){
+  const rsvg=$('#mic-read'),gsvg=$('#mic-gap'),slider=$('#mic-slider'),out=$('#mic-val'),card=$('#mic-readcard'),quizEl=$('#mic-quiz');
+  const st={c:0,mode:'free',target:0,solved:false};
+  const D=()=>st.c/100;
+  function readSVG(){
+    const d=D(),c=st.c,S=56,ex=580,yd=150,t=c%50,u0=Math.floor(d),half=(d-u0)>=0.5-1e-9;
+    let o=`<rect x="0" y="92" width="${ex}" height="116" style="fill:var(--metal);stroke:var(--outline);stroke-width:2"/>`;
+    for(let u=Math.max(0,Math.floor(d-ex/S)-1);u<=u0;u++){
+      const x=ex-(d-u)*S;if(x<3)continue;const len=u%5===0?34:22,hlm=u===u0;
+      o+=`<line x1="${x}" y1="${yd}" x2="${x}" y2="${yd-len}" style="stroke:${hlm?'var(--in)':'var(--outline)'};stroke-width:${hlm?4:2}"/>`;
+      if(u%5===0)o+=`<text x="${x}" y="${yd-len-8}" text-anchor="middle" style="fill:${hlm?'var(--in)':'var(--text)'};font:700 16px var(--f-body)">${u}</text>`;
+      const xh=x+S/2;
+      if(u+0.5<=d+1e-9&&xh>3){const hh=u===u0&&half;o+=`<line x1="${xh}" y1="${yd}" x2="${xh}" y2="${yd+18}" style="stroke:${hh?'var(--comp)':'var(--outline)'};stroke-width:${hh?4:2}"/>`;}
+    }
+    o+=`<line x1="0" y1="${yd}" x2="${ex+80}" y2="${yd}" style="stroke:var(--pow);stroke-width:2"/>`;
+    o+=`<g class="hit" style="cursor:ns-resize"><rect x="${ex}" y="30" width="250" height="240" rx="6" style="fill:var(--metal-2);stroke:var(--outline);stroke-width:2"/>`;
+    for(let x=ex+110;x<ex+245;x+=9)o+=`<line x1="${x}" y1="38" x2="${x}" y2="262" style="stroke:var(--outline);stroke-opacity:.22;stroke-width:2"/>`;
+    o+=`<rect x="${ex}" y="30" width="96" height="240" rx="6" style="fill:var(--metal);stroke:var(--outline);stroke-width:2"/>`;
+    for(let k=t-11;k<=t+11;k++){
+      const y=yd-(k-t)*10;if(y<40||y>260)continue;const lab=mod(k,50),long=lab%5===0,isT=k===t;
+      o+=`<line x1="${ex}" y1="${y}" x2="${ex+(long?38:22)}" y2="${y}" style="stroke:${isT?'var(--pow)':'var(--outline)'};stroke-width:${isT?4:1.6}"/>`;
+      if(long)o+=`<text x="${ex+46}" y="${y+5}" style="fill:${isT?'var(--pow)':'var(--text)'};font:700 16px var(--f-body)">${lab}</text>`;
+    }
+    o+=`</g><rect x="${ex+250}" y="80" width="48" height="140" rx="6" style="fill:var(--metal);stroke:var(--outline);stroke-width:2"/>`;
+    return o;
+  }
+  function gapSVG(){
+    const d=D(),s=10,ax=110,tip=ax+s*d,arm=400,te=arm+s*d;
+    let o=`<rect x="40" y="148" width="360" height="36" style="fill:var(--block);stroke:var(--outline);stroke-width:2"/><rect x="40" y="56" width="50" height="128" style="fill:var(--block);stroke:var(--outline);stroke-width:2"/><rect x="360" y="56" width="40" height="128" style="fill:var(--block);stroke:var(--outline);stroke-width:2"/>`;
+    o+=`<rect x="90" y="84" width="20" height="32" style="fill:var(--metal);stroke:var(--outline);stroke-width:2"/>`;
+    if(d>0.25)o+=`<rect x="110" y="64" width="${tip-110}" height="72" style="fill:var(--metal-2);stroke:var(--outline);stroke-width:2"/>`;
+    o+=`<rect x="${tip}" y="92" width="${te-tip+30}" height="16" style="fill:var(--metal);stroke:var(--outline);stroke-width:2"/>`;
+    o+=`<rect x="400" y="80" width="250" height="40" style="fill:var(--metal);stroke:var(--outline);stroke-width:2"/>`;
+    for(let u=0;u<=d;u++){o+=`<line x1="${400+u*s}" y1="80" x2="${400+u*s}" y2="${80+(u%5===0?14:8)}" style="stroke:var(--outline);stroke-width:1.2"/>`;}
+    o+=`<rect x="${te}" y="62" width="120" height="76" rx="6" style="fill:var(--metal-2);stroke:var(--outline);stroke-width:2"/><rect x="${te+120}" y="74" width="34" height="52" rx="5" style="fill:var(--metal);stroke:var(--outline);stroke-width:2"/>`;
+    o+=`<text x="40" y="30" style="fill:var(--muted);font:700 14px var(--f-body)">Face fixa</text><text x="${tip}" y="${d>0.25?50:30}" style="fill:var(--muted);font:700 14px var(--f-body)">Face móvel</text>`;
+    if(st.mode==='free'||st.solved)o+=`<line x1="110" y1="202" x2="${tip}" y2="202" style="stroke:var(--pow);stroke-width:2"/><line x1="110" y1="196" x2="110" y2="208" style="stroke:var(--pow);stroke-width:2"/><line x1="${tip}" y1="196" x2="${tip}" y2="208" style="stroke:var(--pow);stroke-width:2"/><text x="${(110+tip)/2}" y="194" text-anchor="middle" style="fill:var(--pow);font:700 15px var(--f-body)">${fmt(d)} mm</text>`;
+    return o;
+  }
+  function readCard(){
+    const d=D(),c=st.c,w=Math.floor(d),half=(d-w)>=0.5-1e-9,div=c%50;
+    if(st.mode==='quiz'&&!st.solved){card.innerHTML=`<h2>Lê o micrómetro</h2><p class="simple">Descobre a medida desta peça.</p><p>Lê os traços de cima da manga, vê se o traço de baixo está visível e olha para o número do tambor na linha vermelha. Depois escreve a leitura e carrega em Verificar.</p>`;return;}
+    card.innerHTML=`<h2>Leitura</h2><div class="total">${fmt(d)} mm</div>
+    <ol class="steps">
+      <li><b>Mm inteiros</b> (traços de cima da manga): <span class="c-in">${w} mm</span>.</li>
+      <li><b>Meio milímetro</b> (traço de baixo visível depois do inteiro?): ${half?'<span class="c-comp">sim, +0,50 mm</span>':'<span class="c-comp">não, +0,00 mm</span>'}.</li>
+      <li><b>Tambor</b> (número na linha vermelha): <span class="c-pow">${div}</span> × 0,01 = <span class="c-pow">${fmt(div/100)} mm</span>.</li>
+      <li><b>Soma:</b> ${w} + ${half?'0,50':'0,00'} + ${fmt(div/100)} = <b>${fmt(d)} mm</b>.</li>
+    </ol>`;
+  }
+  function render(){
+    rsvg.innerHTML=readSVG();gsvg.innerHTML=gapSVG();
+    slider.value=String(st.c);slider.disabled=st.mode==='quiz';
+    out.textContent=(st.mode==='quiz'&&!st.solved)?'?':fmt(D())+' mm';
+    readCard();
+  }
+  function setC(v){st.c=clamp(Math.round(v),0,2500);render();}
+  slider.addEventListener('input',()=>setC(+slider.value));
+  $$('[data-ms]').forEach(b=>b.addEventListener('click',()=>{if(st.mode==='quiz')return;setC(st.c+(+b.dataset.ms));}));
+  $$('input[name=mic-mode]').forEach(r=>r.addEventListener('change',()=>{st.mode=r.value;quizEl.hidden=st.mode!=='quiz';if(st.mode==='quiz')newTask();else render();}));
+  rsvg.addEventListener('wheel',e=>{if(st.mode==='quiz')return;e.preventDefault();setC(st.c+(e.deltaY>0?1:-1));},{passive:false});
+  let drag=null;
+  rsvg.addEventListener('pointerdown',e=>{if(st.mode==='quiz')return;if(!e.target.closest('.hit'))return;drag={y:e.clientY,c:st.c};rsvg.setPointerCapture(e.pointerId);e.preventDefault();});
+  rsvg.addEventListener('pointermove',e=>{if(!drag)return;const r=rsvg.getBoundingClientRect();const dy=(e.clientY-drag.y)*300/r.height;setC(drag.c+dy/10);});
+  const end=()=>{drag=null;};rsvg.addEventListener('pointerup',end);rsvg.addEventListener('pointercancel',end);
+  function newTask(){
+    st.solved=false;st.target=300+Math.floor(Math.random()*2200);st.c=st.target;
+    quizEl.innerHTML=`<h2>Exercício</h2><p>Qual é a medida da peça, em mm?</p><div class="row"><input id="mic-ans" type="text" inputmode="decimal" autocomplete="off" aria-label="A tua leitura em milímetros" placeholder="ex.: 12,63"><button class="btn primary" id="mic-chk" type="button">Verificar</button><button class="btn" id="mic-new" type="button">Nova peça</button></div><p class="fb" id="mic-fb" aria-live="polite"></p>`;
+    $('#mic-chk').onclick=check;$('#mic-new').onclick=newTask;$('#mic-ans').addEventListener('keydown',e=>{if(e.key==='Enter')check();});
+    render();
+  }
+  function check(){
+    const v=parseFloat(($('#mic-ans').value||'').replace(',','.')),fb=$('#mic-fb'),t=st.target/100;
+    if(isNaN(v)){fb.className='fb';fb.textContent='Escreve um número, por exemplo 12,63.';return;}
+    st.solved=true;
+    if(Math.abs(v-t)<0.0051){fb.className='fb ok';fb.textContent='Certo! '+fmt(t)+' mm.';}
+    else{fb.className='fb no';fb.textContent='Ainda não: a medida é '+fmt(t)+' mm. Vê os passos ao lado.';}
+    render();
+  }
+  render();
+}
+
+/* ================= ARRANQUE ================= */
+const sims={};
+sims.m4=new Sim($('#tab-m4'),D4);
+sims.m2=new Sim($('#tab-m2'),D2);
+sims.wk=new Sim($('#tab-wk'),DW);
+sims.carb=new CarbSim();sims.aero=new AeroSim();sims.pitot=new PitotSim();
+setupCaliper();setupMicrometer();
+let active=sims.m4;
+function showTab(id){
+  $$('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===id)));
+  $$('.tabpanel').forEach(p=>{p.hidden=p.id!=='tab-'+id;});
+  active=sims[id]||null;if(active)active.resize();
+}
+$$('nav.tabs button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+let last=0;
+function loop(ts){const dt=Math.min(0.05,(ts-last)/1000||0);last=ts;if(active)active.frame(dt);requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+window.addEventListener('resize',()=>{if(active)active.resize();});
+$('#themeBtn').addEventListener('click',()=>{
+  const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
+  r.dataset.theme=dark?'light':'dark';
+});
+function refreshColors(){loadColors();if(active)active.render();}
+new MutationObserver(refreshColors).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',refreshColors);}catch(e){}
+window.__sims=sims;
+})();
+
+</script>
+</body>
+</html>
